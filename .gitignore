@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+
+# Output folders
+dist/
+build/
+out/
+release/
+
+# Logs and environment
+*.log
+.env
+.env.*
+
+# System/IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]

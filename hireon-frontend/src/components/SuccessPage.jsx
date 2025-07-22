@@ -1,0 +1,287 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth.jsx';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  CheckCircle, 
+  Download, 
+  Copy, 
+  ExternalLink, 
+  Smartphone,
+  AlertCircle,
+  Clock,
+  Shield
+} from 'lucide-react';
+import { api } from '../lib/api.js';
+
+const SuccessPage = ({ onBack }) => {
+  const { user } = useAuth();
+  const [deepLink, setDeepLink] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    generateDeepLink();
+  }, []);
+
+  const generateDeepLink = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await api.post('/api/generate-deep-link');
+      if (response.data.success) {
+        setDeepLink(response.data.deepLink);
+      } else {
+        setError('Failed to generate deep link');
+      }
+    } catch (error) {
+      console.error('Deep link generation error:', error);
+      setError('Failed to generate deep link');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(deepLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  const openDeepLink = () => {
+    window.location.href = deepLink;
+  };
+
+  const downloadTokenFile = async () => {
+    try {
+      const response = await api.post('/api/generate-token-file');
+      const blob = new Blob([JSON.stringify(response.data, null, 2)], {
+        type: 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hireon-auth-token.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Token file download error:', error);
+      setError('Failed to download token file');
+    }
+  };
+
+  const getSubscriptionBadge = () => {
+    const plan = user?.subscription || user?.plan || 'free';
+    const colors = {
+      trial: 'bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 text-black shadow-2xl shadow-amber-500/50',
+      monthly: 'bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 text-black shadow-2xl shadow-cyan-500/50',
+      annual: 'bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 text-black shadow-2xl shadow-purple-500/50',
+      free: 'bg-gradient-to-r from-gray-300 via-slate-300 to-zinc-300 text-black shadow-2xl shadow-gray-500/50'
+    };
+    
+    return (
+      <Badge className={`${colors[plan] || colors.free} font-bold px-6 py-2 text-lg border-0 animate-pulse`}>
+        ✨ {plan.charAt(0).toUpperCase() + plan.slice(1)} Plan
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+      {/* Animated Background Orbs */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-violet-500/30 to-purple-500/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-gradient-to-r from-pink-500/20 to-rose-500/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
+        
+        {/* Floating Particles */}
+        <div className="absolute top-20 left-20 w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+        <div className="absolute top-40 right-32 w-3 h-3 bg-violet-400 rounded-full animate-bounce delay-300"></div>
+        <div className="absolute bottom-40 left-32 w-2 h-2 bg-pink-400 rounded-full animate-bounce delay-700"></div>
+        <div className="absolute bottom-20 right-20 w-3 h-3 bg-blue-400 rounded-full animate-bounce delay-1000"></div>
+      </div>
+      
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
+        <div className="w-full max-w-3xl space-y-10">
+          {/* MASSIVE Success Header */}
+          <div className="text-center relative">
+            <div className="relative mb-8">
+              <div className="w-32 h-32 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/50 animate-pulse">
+                <CheckCircle className="h-20 w-20 text-white" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/50 to-green-400/50 rounded-full blur-2xl animate-pulse"></div>
+            </div>
+            
+            <h1 className="text-7xl font-black bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent mb-6 animate-pulse">
+              PAYMENT SUCCESS!
+            </h1>
+            <p className="text-2xl text-gray-300 font-bold mb-4">🎉 Your subscription is now ACTIVE! 🎉</p>
+            <p className="text-lg text-cyan-300 font-semibold">Launch your desktop app and unlock premium features</p>
+          </div>
+
+          {/* Premium Account Card */}
+          <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border-2 border-cyan-500/50 backdrop-blur-2xl shadow-2xl shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all duration-500 hover:scale-105 transform">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-white flex items-center justify-between text-2xl font-bold">
+                <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                  💎 Premium Account
+                </span>
+                {getSubscriptionBadge()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-gradient-to-r from-cyan-400 to-violet-400 rounded-full flex items-center justify-center shadow-2xl shadow-cyan-500/50">
+                  <span className="text-white font-black text-2xl">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-bold text-xl">{user?.name}</p>
+                  <p className="text-cyan-300 text-lg font-semibold">{user?.email}</p>
+                </div>
+              </div>
+              
+              {user?.expires && (
+                <div className="flex items-center gap-3 text-lg bg-gradient-to-r from-violet-500/20 to-purple-500/20 rounded-2xl p-4 border border-violet-500/30 shadow-lg">
+                  <Clock className="h-6 w-6 text-violet-400" />
+                  <span className="text-violet-300 font-semibold">
+                    ⏰ Expires: {new Date(user.expires * 1000).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Desktop App Connection */}
+          <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border-2 border-violet-500/50 backdrop-blur-2xl shadow-2xl shadow-violet-500/20 hover:shadow-violet-500/40 transition-all duration-500 hover:scale-105 transform">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-white flex items-center gap-4 text-2xl font-bold">
+                <div className="w-12 h-12 bg-gradient-to-r from-violet-400 to-purple-400 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Smartphone className="h-6 w-6 text-white" />
+                </div>
+                <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                  🚀 Launch Desktop App
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="relative mx-auto w-20 h-20 mb-6">
+                    <div className="absolute inset-0 rounded-full border-4 border-violet-500/30"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet-400 animate-spin"></div>
+                    <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-cyan-400 animate-spin delay-75"></div>
+                  </div>
+                  <p className="text-violet-300 text-2xl font-bold animate-pulse">⚡ Generating secure link...</p>
+                </div>
+              ) : error ? (
+                <div className="flex items-center gap-4 text-red-400 bg-gradient-to-r from-red-500/20 to-pink-500/20 p-6 rounded-2xl border border-red-500/30 shadow-lg">
+                  <AlertCircle className="h-8 w-8 text-red-400" />
+                  <span className="flex-1 text-lg font-semibold">🚨 {error}</span>
+                  <Button 
+                    variant="ghost" 
+                    onClick={generateDeepLink}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/20 font-bold text-lg px-6 py-3"
+                  >
+                    🔄 Retry
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 text-lg bg-gradient-to-r from-emerald-500/20 to-green-500/20 p-4 rounded-2xl border border-emerald-500/30 shadow-lg">
+                      <Shield className="h-6 w-6 text-emerald-400" />
+                      <span className="text-emerald-300 font-semibold">🔒 Secure authentication link generated</span>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-gray-900/50 to-black/50 p-6 rounded-2xl border border-gray-600/30 shadow-2xl">
+                      <p className="text-gray-400 mb-3 font-bold text-sm">🔗 DEEP LINK URL:</p>
+                      <p className="text-cyan-300 font-mono text-sm break-all bg-black/50 p-4 rounded-xl border border-cyan-500/30 shadow-inner">
+                        {deepLink}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Button 
+                      onClick={openDeepLink}
+                      className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-bold text-lg py-4 px-6 rounded-2xl shadow-2xl shadow-cyan-500/50 hover:shadow-cyan-500/70 transition-all duration-300 transform hover:scale-105"
+                    >
+                      <ExternalLink className="h-5 w-5 mr-2" />
+                      🚀 Open App
+                    </Button>
+                    
+                    <Button 
+                      onClick={copyToClipboard}
+                      className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white font-bold text-lg py-4 px-6 rounded-2xl shadow-2xl shadow-violet-500/50 hover:shadow-violet-500/70 transition-all duration-300 transform hover:scale-105"
+                    >
+                      <Copy className="h-5 w-5 mr-2" />
+                      {copied ? '✅ Copied!' : '📋 Copy Link'}
+                    </Button>
+                    
+                    <Button 
+                      onClick={downloadTokenFile}
+                      className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-bold text-lg py-4 px-6 rounded-2xl shadow-2xl shadow-pink-500/50 hover:shadow-pink-500/70 transition-all duration-300 transform hover:scale-105"
+                    >
+                      <Download className="h-5 w-5 mr-2" />
+                      💾 Download Token
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Instructions */}
+          <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border-2 border-pink-500/50 backdrop-blur-2xl shadow-2xl shadow-pink-500/20 hover:shadow-pink-500/40 transition-all duration-500 hover:scale-105 transform">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-white text-2xl font-bold bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
+                📖 How to Use Your Premium Access
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4">
+                <div className="p-6 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-300 transform hover:scale-105">
+                  <p className="font-black text-white text-xl mb-3">🎯 Option 1: Direct Launch</p>
+                  <p className="text-cyan-300 font-semibold">Click "Open App" to instantly launch HireOn desktop with your premium features activated.</p>
+                </div>
+                
+                <div className="p-6 bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-2xl border border-violet-500/30 hover:border-violet-500/50 transition-all duration-300 transform hover:scale-105">
+                  <p className="font-black text-white text-xl mb-3">📋 Option 2: Manual Copy</p>
+                  <p className="text-violet-300 font-semibold">Copy the secure link and paste it anywhere to access your premium account.</p>
+                </div>
+                
+                
+              </div>
+              
+              
+            </CardContent>
+          </Card>
+
+          {/* Back Button */}
+          <div className="text-center pt-8">
+            <Button 
+              variant="ghost" 
+              onClick={onBack}
+              className="text-gray-400 hover:text-white hover:bg-gradient-to-r hover:from-gray-700 hover:to-gray-600 transition-all duration-300 px-8 py-4 font-bold text-lg rounded-2xl"
+            >
+              ← Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SuccessPage;

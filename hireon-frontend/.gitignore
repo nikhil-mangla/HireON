@@ -1,0 +1,31 @@
+# Ignore node_modules
+node_modules/
+
+# Ignore environment and build files
+.env
+.env.*
+dist/
+build/
+*.log
+
+# Ignore OS and IDE files
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore Electron build output
+out/
+release/
+*.dmg
+
+# Only allow these back in
+!.gitignore
+!hireon-frontend/
+!hireon-backend/
