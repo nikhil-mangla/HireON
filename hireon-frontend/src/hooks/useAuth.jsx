@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
 
   // Fetch latest profile from backend and update state
   const fetchProfile = async () => {
+    console.log('fetchProfile called');
     const token = getAuthToken();
     if (!token) {
       setUserState(null);
@@ -108,8 +109,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (updatedUser) => {
+    console.log('updateUser called with:', updatedUser);
     setUser(updatedUser);
     setUserState(updatedUser);
+    console.log('User state updated');
+    
+    // Force a re-render by updating the authenticated state
+    setIsAuthenticated(true);
   };
 
   // Get subscription status with expiration check

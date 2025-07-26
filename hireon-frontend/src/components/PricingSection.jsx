@@ -15,7 +15,7 @@ const PricingSection = () => {
       name: 'Trial Week',
       price: 99,
       originalPrice: null,
-      duration: '7 days',
+      duration: '2 days',
       description: 'Perfect for trying out our platform',
       badge: 'Most Popular',
       badgeColor: 'bg-gradient-to-r from-green-500 to-emerald-500',
@@ -24,7 +24,6 @@ const PricingSection = () => {
       features: [
         '5 interview sessions',
         'Basic AI feedback',
-        'Resume upload',
         'Email support',
         'Try premium features'
       ],

@@ -39,6 +39,11 @@ import { useNavigate } from 'react-router-dom';
 const Dashboard = () => {
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
+  
+  // Debug: Log user state changes
+  useEffect(() => {
+    console.log('Dashboard received user state:', user);
+  }, [user]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSuccessPage, setShowSuccessPage] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('monthly');

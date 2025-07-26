@@ -11,7 +11,9 @@ import {
   Smartphone,
   AlertCircle,
   Clock,
-  Shield
+  Shield,
+  Monitor,
+  Apple
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 
@@ -21,6 +23,7 @@ const SuccessPage = ({ onBack }) => {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [downloadStarted, setDownloadStarted] = useState({ windows: false, mac: false });
 
   useEffect(() => {
     generateDeepLink();
@@ -77,6 +80,30 @@ const SuccessPage = ({ onBack }) => {
       console.error('Token file download error:', error);
       setError('Failed to download token file');
     }
+  };
+
+  const handleDesktopDownload = (platform) => {
+    // Mock download URLs - replace with actual download links
+    const downloadUrls = {
+      windows: 'https://github.com/your-repo/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
+      mac: 'https://github.com/your-repo/hireon-desktop/releases/latest/download/HireOn.dmg'
+    };
+
+    // Start download
+    const link = document.createElement('a');
+    link.href = downloadUrls[platform];
+    link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Update UI state
+    setDownloadStarted(prev => ({ ...prev, [platform]: true }));
+
+    // Reset state after 3 seconds
+    setTimeout(() => {
+      setDownloadStarted(prev => ({ ...prev, [platform]: false }));
+    }, 3000);
   };
 
   const getSubscriptionBadge = () => {
@@ -242,6 +269,103 @@ const SuccessPage = ({ onBack }) => {
             </CardContent>
           </Card>
 
+          {/* Desktop App Download */}
+          <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border-2 border-emerald-500/50 backdrop-blur-2xl shadow-2xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all duration-500 hover:scale-105 transform">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-white flex items-center gap-4 text-2xl font-bold">
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Download className="h-6 w-6 text-white" />
+                </div>
+                <span className="bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+                  💻 Download Desktop App
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <p className="text-emerald-300 text-lg font-semibold text-center">
+                Get the full HireOn experience with our powerful desktop application
+              </p>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Windows Download */}
+                <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-6 rounded-2xl border border-blue-500/30 hover:border-blue-500/50 transition-all duration-300 transform hover:scale-105">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg">
+                      <Monitor className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-xl">Windows</h3>
+                      <p className="text-blue-300 text-sm">Version 2.1.0 • 45.2 MB</p>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => handleDesktopDownload('windows')}
+                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl shadow-blue-500/50 hover:shadow-blue-500/70 transition-all duration-300 transform hover:scale-105"
+                    disabled={downloadStarted.windows}
+                  >
+                    {downloadStarted.windows ? (
+                      <>
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        Download Started!
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-5 w-5 mr-2" />
+                        Download for Windows
+                      </>
+                    )}
+                  </Button>
+                  
+                  <p className="text-blue-300 text-xs mt-3 text-center">
+                    Windows 10+ • Automatic installer
+                  </p>
+                </div>
+
+                {/* macOS Download */}
+                <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-6 rounded-2xl border border-purple-500/30 hover:border-purple-500/50 transition-all duration-300 transform hover:scale-105">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-400 rounded-xl flex items-center justify-center shadow-lg">
+                      <Apple className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-xl">macOS</h3>
+                      <p className="text-purple-300 text-sm">Version 2.1.0 • 52.8 MB</p>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => handleDesktopDownload('mac')}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl shadow-purple-500/50 hover:shadow-purple-500/70 transition-all duration-300 transform hover:scale-105"
+                    disabled={downloadStarted.mac}
+                  >
+                    {downloadStarted.mac ? (
+                      <>
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        Download Started!
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-5 w-5 mr-2" />
+                        Download for macOS
+                      </>
+                    )}
+                  </Button>
+                  
+                  <p className="text-purple-300 text-xs mt-3 text-center">
+                    macOS 10.15+ • Universal binary
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 p-4 rounded-xl border border-emerald-500/30">
+                <p className="text-emerald-300 text-sm font-semibold text-center">
+                  💡 After downloading, install the app and use your premium account to unlock all features!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Instructions */}
           <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border-2 border-pink-500/50 backdrop-blur-2xl shadow-2xl shadow-pink-500/20 hover:shadow-pink-500/40 transition-all duration-500 hover:scale-105 transform">
             <CardHeader className="pb-6">
@@ -261,10 +385,11 @@ const SuccessPage = ({ onBack }) => {
                   <p className="text-violet-300 font-semibold">Copy the secure link and paste it anywhere to access your premium account.</p>
                 </div>
                 
-                
+                <div className="p-6 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-2xl border border-emerald-500/30 hover:border-emerald-500/50 transition-all duration-300 transform hover:scale-105">
+                  <p className="font-black text-white text-xl mb-3">💻 Option 3: Download Desktop App</p>
+                  <p className="text-emerald-300 font-semibold">Download and install the desktop application for the best experience with offline capabilities.</p>
+                </div>
               </div>
-              
-              
             </CardContent>
           </Card>
 

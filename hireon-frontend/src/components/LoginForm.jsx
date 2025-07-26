@@ -36,7 +36,7 @@ const LoginForm = ({ onSwitchToSignup }) => {
       if (!result.success) {
         setError(result.error);
       }
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

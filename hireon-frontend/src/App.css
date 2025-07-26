@@ -118,3 +118,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Razorpay accessibility fixes */
+.razorpay-container {
+  /* Remove aria-hidden to fix accessibility issue */
+  /* aria-hidden will be removed via JavaScript */
+}
+
+.razorpay-checkout-frame {
+  /* Ensure iframe is accessible */
+  border: none;
+  outline: none;
+}
+
+/* Ensure focus is visible for accessibility */
+.razorpay-container:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

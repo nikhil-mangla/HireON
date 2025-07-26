@@ -1,17 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
-import { paymentAPI } from '../lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check, Crown, Zap, Star, CreditCard, Shield } from 'lucide-react';
+import { paymentAPI, setAuthToken } from '../lib/api';
+
+// Helper to load Razorpay script dynamically
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (document.getElementById('razorpay-sdk')) {
+      return resolve(true);
+    }
+    const script = document.createElement('script');
+    script.id = 'razorpay-sdk';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => {
+      // Add accessibility improvements for Razorpay iframe
+      setTimeout(() => {
+        const razorpayContainer = document.querySelector('.razorpay-container');
+        if (razorpayContainer) {
+          // Remove aria-hidden to fix accessibility issue
+          razorpayContainer.removeAttribute('aria-hidden');
+          // Add proper ARIA attributes
+          razorpayContainer.setAttribute('role', 'dialog');
+          razorpayContainer.setAttribute('aria-modal', 'true');
+          razorpayContainer.setAttribute('aria-label', 'Payment Gateway');
+        }
+      }, 100);
+      resolve(true);
+    };
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { user, updateUser } = useAuth();
+
+  // Fix Razorpay accessibility issues
+  useEffect(() => {
+    if (isOpen) {
+      // Monitor for Razorpay container and fix accessibility
+      const checkAndFixRazorpayAccessibility = () => {
+        const razorpayContainer = document.querySelector('.razorpay-container');
+        if (razorpayContainer) {
+          // Remove aria-hidden to fix accessibility issue
+          razorpayContainer.removeAttribute('aria-hidden');
+          // Add proper ARIA attributes
+          razorpayContainer.setAttribute('role', 'dialog');
+          razorpayContainer.setAttribute('aria-modal', 'true');
+          razorpayContainer.setAttribute('aria-label', 'Payment Gateway');
+        }
+      };
+
+      // Check immediately and then periodically
+      checkAndFixRazorpayAccessibility();
+      const interval = setInterval(checkAndFixRazorpayAccessibility, 500);
+
+      return () => clearInterval(interval);
+    }
+  }, [isOpen]);
 
   const plans = {
     trial: {
@@ -63,123 +116,107 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
 
   const currentPlan = plans[selectedPlan] || plans.monthly;
 
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
   const handlePayment = async () => {
     setLoading(true);
     setError('');
 
-    try {
-      // ====== RAZORPAY PAYMENT LOGIC COMMENTED FOR TESTING =====
-      /*
-      // Load Razorpay script
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error('Failed to load payment gateway');
-      }
-
-      // Create order
-      const orderResponse = await paymentAPI.createOrder({
-        amount: currentPlan.price,
-        currency: 'INR',
-        plan: selectedPlan
-      });
-
-      if (!orderResponse.success) {
-        throw new Error(orderResponse.error || 'Failed to create order');
-      }
-
-      // Configure Razorpay options
-      const options = {
-        key: orderResponse.key_id,
-        amount: orderResponse.order.amount,
-        currency: orderResponse.order.currency,
-        name: 'HireOn',
-        description: `${currentPlan.name} Subscription`,
-        order_id: orderResponse.order.id,
-        prefill: {
-          name: user.name,
-          email: user.email,
-        },
-        theme: {
-          color: '#6366f1'
-        },
-        handler: async (response) => {
           try {
-            // Verify payment
-            const verifyResponse = await paymentAPI.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              plan: selectedPlan
-            });
-
-            if (verifyResponse.success) {
-              // Update user with new subscription
-              const updatedUser = {
-                ...user,
-                plan: verifyResponse.plan,
-                verified: true,
-                expires: verifyResponse.expires
-              };
-              updateUser(updatedUser);
-              
-              // Show success message and close modal
-              alert('Payment successful! Your subscription has been activated.');
-              onClose();
-            } else {
-              throw new Error(verifyResponse.error || 'Payment verification failed');
-            }
-          } catch (error) {
-            console.error('Payment verification error:', error);
-            setError('Payment verification failed. Please contact support.');
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setLoading(false);
-          }
+        // ====== RAZORPAY PAYMENT LOGIC COMMENTED FOR TESTING =====
+        
+        // Load Razorpay script
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          throw new Error('Failed to load payment gateway');
         }
-      };
 
-      // Open Razorpay checkout
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-      */
-      // ====== END RAZORPAY PAYMENT LOGIC =====
+        // Create order
+        const orderResponse = await paymentAPI.createOrder({
+          amount: currentPlan.price,
+          currency: 'INR',
+          plan: selectedPlan
+        });
 
-      // ====== MOCK SUCCESS FOR TESTING =====
-      // Simulate a successful payment verification response
-      const verifyResponse = {
-        success: true,
-        plan: selectedPlan,
-        expires: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60 // 30 days from now
-      };
+        if (!orderResponse.success) {
+          throw new Error(orderResponse.error || 'Failed to create order');
+        }
 
-      if (verifyResponse.success) {
-        // Update user with new subscription
-        const updatedUser = {
-          ...user,
-          plan: verifyResponse.plan,
-          verified: true,
-          expires: verifyResponse.expires
+        // Configure Razorpay options
+        const options = {
+          key: orderResponse.key_id,
+          amount: orderResponse.order.amount,
+          currency: orderResponse.order.currency,
+          name: 'HireOn',
+          description: `${currentPlan.name} Subscription`,
+          order_id: orderResponse.order.id,
+          prefill: {
+            name: user.name,
+            email: user.email,
+          },
+          theme: {
+            color: '#6366f1'
+          },
+          handler: async (response) => {
+            try {
+              // Verify payment
+              // This sends a POST request to /api/razorpay/verify-payment on the backend.
+              const verifyResponse = await paymentAPI.verifyPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                plan: selectedPlan
+              });
+
+              if (verifyResponse.success) {
+                console.log('Payment verification successful:', verifyResponse);
+                console.log('Current user before update:', user);
+                
+                // 1. Save the new token with updated subscription
+                setAuthToken(verifyResponse.token);
+                
+                // 2. Update user state with new subscription data
+                const updatedUser = {
+                  ...user,
+                  plan: verifyResponse.plan,
+                  verified: true,
+                  expires: verifyResponse.expires
+                };
+                console.log('Updated user data:', updatedUser);
+                updateUser(updatedUser);
+                
+                // Force a re-render by updating the user state immediately
+                setTimeout(() => {
+                  console.log('Checking user state after update...');
+                  // This will trigger a re-render
+                }, 100);
+                
+                // 3. Show success message and close modal
+                alert('Payment successful! Your subscription has been activated.');
+                
+                // Wait a moment for state to update before closing
+                setTimeout(() => {
+                  console.log('Closing modal, final user state:', user);
+                  onClose();
+                }, 1000);
+              } else {
+                throw new Error(verifyResponse.error || 'Payment verification failed');
+              }
+            } catch (error) {
+              console.error('Payment verification error:', error);
+              setError('Payment verification failed. Please contact support.');
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setLoading(false);
+            }
+          }
         };
-        updateUser(updatedUser);
-        // Show success message and close modal
-        alert('Payment successful! Your subscription has been activated.');
-        onClose();
-      } else {
-        throw new Error(verifyResponse.error || 'Payment verification failed');
-      }
-      // ====== END MOCK SUCCESS =====
+
+        // Open Razorpay checkout
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+        
+        // ====== END RAZORPAY PAYMENT LOGIC =====
     } catch (error) {
       console.error('Payment error:', error);
       setError(error.message || 'Payment failed. Please try again.');
