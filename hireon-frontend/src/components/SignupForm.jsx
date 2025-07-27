@@ -59,7 +59,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
       if (!result.success) {
         setError(result.error);
       }
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -69,8 +69,8 @@ const SignupForm = ({ onSwitchToLogin }) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-2">Create account</h2>
-        <p className="text-gray-300">
+        <h2 className="text-6xl font-bold text-white mb-2">Create account</h2>
+        <p className="text-xl text-gray-300">
           Join HireOn to start practicing interviews
         </p>
       </div>

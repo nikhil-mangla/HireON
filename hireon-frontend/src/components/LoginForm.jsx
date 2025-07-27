@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
-const LoginForm = ({ onSwitchToSignup }) => {
+const LoginForm = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -46,8 +46,8 @@ const LoginForm = ({ onSwitchToSignup }) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
-        <p className="text-gray-300">
+        <h2 className="text-6xl font-bold text-white mb-2">Welcome back</h2>
+        <p className="text-xl text-gray-300">
           Sign in to your HireOn account
         </p>
       </div>

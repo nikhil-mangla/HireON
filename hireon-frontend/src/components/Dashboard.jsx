@@ -308,16 +308,16 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
-      <header className="bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0 z-40">
+      <header className="bg-black/20 backdrop-blur-xl border-b border-slate-600/50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40">
                 <Target className="h-6 w-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">
                 HireOn
               </h1>
             </div>
@@ -344,7 +344,7 @@ const Dashboard = () => {
               <Button 
                 variant="outline" 
                 onClick={logout}
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="border-slate-600/50 text-slate-300 hover:bg-slate-800/50"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
@@ -357,16 +357,16 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Subscription Status Banner */}
         {subscriptionStatus === 'free' && (
-          <Card className="mb-8 border-2 border-dashed border-purple-400/30 bg-gradient-to-r from-purple-900/20 to-pink-900/20 backdrop-blur-sm">
+          <Card className="mb-8 border-2 border-dashed border-cyan-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm border-slate-600/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full shadow-lg">
+                  <div className="p-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full shadow-lg shadow-blue-500/40">
                     <Crown className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg text-white">Unlock Premium Features</h3>
-                    <p className="text-gray-300">
+                    <p className="text-slate-300">
                       Get unlimited access to AI feedback, advanced analytics, and more
                     </p>
                   </div>
@@ -375,13 +375,13 @@ const Dashboard = () => {
                   <Button 
                     onClick={() => handleUpgrade('trial')}
                     variant="outline"
-                    className="border-purple-400/30 bg-white/10 text-white hover:bg-white/20"
+                    className="border-cyan-400/30 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
                   >
                     Try ₹99 Trial
                   </Button>
                   <Button 
                     onClick={() => handleUpgrade('monthly')}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 shadow-lg"
+                    className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 shadow-lg"
                   >
                     Upgrade Now
                   </Button>
@@ -392,7 +392,7 @@ const Dashboard = () => {
         )}
 
         {subscriptionStatus === 'expired' && (
-          <Card className="mb-8 border-2 border-red-400/30 bg-gradient-to-r from-red-900/20 to-orange-900/20 backdrop-blur-sm">
+          <Card className="mb-8 border-2 border-red-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm border-slate-600/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -401,7 +401,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg text-white">Subscription Expired</h3>
-                    <p className="text-gray-300">
+                    <p className="text-slate-300">
                       Your premium subscription has expired. Renew to continue accessing premium features.
                     </p>
                   </div>
@@ -410,7 +410,7 @@ const Dashboard = () => {
                   <Button 
                     onClick={() => handleUpgrade('trial')}
                     variant="outline"
-                    className="border-red-400/30 bg-white/10 text-white hover:bg-white/20"
+                    className="border-red-400/30 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
                   >
                     Try ₹99 Trial
                   </Button>
@@ -427,7 +427,7 @@ const Dashboard = () => {
         )}
 
         {subscriptionStatus !== 'free' && subscriptionStatus !== 'expired' && (
-          <Card className="mb-8 border-2 border-green-400/30 bg-gradient-to-r from-green-900/20 to-emerald-900/20 backdrop-blur-sm">
+          <Card className="mb-8 border-2 border-green-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm border-slate-600/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -441,7 +441,7 @@ const Dashboard = () => {
                         {user?.plan?.toUpperCase()}
                       </Badge>
                     </h3>
-                    <p className="text-gray-300">
+                    <p className="text-slate-300">
                       {timeRemaining && timeRemaining !== 'Expired' ? (
                         <>Time remaining: {timeRemaining}</>
                       ) : (
@@ -454,7 +454,7 @@ const Dashboard = () => {
                   <Button 
                     variant="outline"
                     onClick={() => handleUpgrade('annual')}
-                    className="border-green-400/30 bg-white/10 text-white hover:bg-white/20"
+                    className="border-green-400/30 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60"
                   >
                     Extend
                   </Button>
@@ -468,13 +468,13 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Quick Actions */}
           <div className="lg:col-span-2 space-y-8">
-            <Card className="bg-black/20 backdrop-blur-xl border-white/10">
+            <Card className="bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-xl border-slate-600/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <Zap className="h-5 w-5 text-purple-400" />
+                  <Zap className="h-5 w-5 text-cyan-400" />
                   Quick Actions
                 </CardTitle>
-                <CardDescription className="text-gray-300">
+                <CardDescription className="text-slate-300">
                   Ace your interview journey
                 </CardDescription>
               </CardHeader>
@@ -485,7 +485,7 @@ const Dashboard = () => {
                       console.log('Start Interview clicked');
                       handleStartSession();
                     }}
-                    className="h-24 bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white border-0 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+                    className="h-24 bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 text-white border-0 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
                     disabled={subscriptionStatus === 'free' || subscriptionStatus === 'expired'} // Temporarily disabled for testing
                   >
                     <div className="text-center">
@@ -497,7 +497,7 @@ const Dashboard = () => {
                   
                   <Button 
                     variant="outline" 
-                    className="h-24 border-2 border-dashed border-purple-400/30 bg-white/5 text-white hover:bg-white/10 hover:border-purple-400/50 transform hover:scale-105 transition-all duration-200"
+                    className="h-24 border-2 border-dashed border-cyan-400/30 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 hover:border-cyan-400/50 transform hover:scale-105 transition-all duration-200"
                     onClick={handleStopSession}
                   >
                     <div className="text-center">
@@ -600,10 +600,10 @@ const Dashboard = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Subscription Card */}
-            <Card className="bg-gradient-to-br from-purple-600 to-pink-600 text-white border-0 shadow-xl">
+            <Card className="bg-gradient-to-br from-slate-800/60 to-slate-700/60 text-white border-slate-600/50 shadow-xl backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5" />
+                  <Crown className="h-5 w-5 text-cyan-400" />
                   Subscription
                 </CardTitle>
               </CardHeader>
@@ -629,14 +629,14 @@ const Dashboard = () => {
                     <div className="space-y-3 pt-2">
                       <Button 
                         onClick={() => handleUpgrade('trial')}
-                        className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                        className="w-full bg-slate-700/60 hover:bg-slate-600/60 text-white border-slate-600/50"
                         size="sm"
                       >
                         Try ₹99 Trial
                       </Button>
                       <Button 
                         onClick={() => handleUpgrade('monthly')}
-                        className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                        className="w-full bg-slate-700/60 hover:bg-slate-600/60 text-white border-slate-600/50"
                         size="sm"
                       >
                         Upgrade to Premium
@@ -648,10 +648,10 @@ const Dashboard = () => {
             </Card>
 
             {/* Desktop App Card */}
-            <Card className="bg-gradient-to-br from-slate-700 to-slate-800 text-white border-0 shadow-xl">
+            <Card className="bg-gradient-to-br from-slate-800/60 to-slate-700/60 text-white border-slate-600/50 shadow-xl backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5" />
+                  <Smartphone className="h-5 w-5 text-cyan-400" />
                   Desktop App
                 </CardTitle>
               </CardHeader>
@@ -664,7 +664,7 @@ const Dashboard = () => {
                   {subscriptionStatus !== 'free' && subscriptionStatus !== 'expired' ? (
                     <Button 
                       onClick={() => setShowSuccessPage(true)}
-                      className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                      className="w-full bg-slate-700/60 hover:bg-slate-600/60 text-white border-slate-600/50"
                       size="sm"
                     >
                       Open Desktop App
@@ -676,7 +676,7 @@ const Dashboard = () => {
                       </p>
                       <Button 
                         onClick={() => handleUpgrade('trial')}
-                        className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30"
+                        className="w-full bg-slate-700/60 hover:bg-slate-600/60 text-white border-slate-600/50"
                         size="sm"
                       >
                         Get Premium Access
@@ -693,55 +693,55 @@ const Dashboard = () => {
       {/* Session Modal */}
       {showSessionModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md bg-black/80 backdrop-blur-xl border-white/10 text-white">
+          <Card className="w-full max-w-md bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-xl border-slate-600/50 text-white">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <PlayCircle className="h-5 w-5 text-purple-400" />
+                  <PlayCircle className="h-5 w-5 text-cyan-400" />
                   Start Interview Session
                 </CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowSessionModal(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowSessionModal(false)}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-purple-400" />
+                  <Briefcase className="h-4 w-4 text-cyan-400" />
                   Job Role
                 </label>
                 <input
                   type="text"
                   value={sessionData.jobRole}
                   onChange={(e) => setSessionData(prev => ({ ...prev, jobRole: e.target.value }))}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full p-3 bg-slate-800/60 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                   placeholder="e.g., Software Engineer, Data Scientist"
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
-                  <Building className="h-4 w-4 text-purple-400" />
+                  <Building className="h-4 w-4 text-cyan-400" />
                   Company
                 </label>
                 <input
                   type="text"
                   value={sessionData.jobCompany}
                   onChange={(e) => setSessionData(prev => ({ ...prev, jobCompany: e.target.value }))}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full p-3 bg-slate-800/60 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                   placeholder="e.g., Google, Microsoft, Amazon"
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-purple-400" />
+                  <FileText className="h-4 w-4 text-cyan-400" />
                   Resume Upload
                 </label>
                 <div className="relative">
@@ -754,20 +754,20 @@ const Dashboard = () => {
                   />
                   <label
                     htmlFor="resume-upload"
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-2"
+                    className="w-full p-3 bg-slate-800/60 border border-slate-600/50 rounded-lg text-white cursor-pointer hover:bg-slate-700/60 transition-colors flex items-center gap-2"
                   >
                     <Upload className="h-4 w-4" />
                     {sessionData.resume ? sessionData.resume.name : 'Upload PDF or DOCX'}
                   </label>
                 </div>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-slate-400">
                   Only PDF and DOCX files are allowed
                 </p>
               </div>
 
               <Button 
                 onClick={handleSaveSession}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white py-3 shadow-lg"
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 text-white py-3 shadow-lg"
               >
                 Save & Start Session
               </Button>

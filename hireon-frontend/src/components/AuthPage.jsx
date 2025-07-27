@@ -82,8 +82,8 @@ const AuthPage = () => {
 
       <div className="relative z-10 flex min-h-screen">
         {/* Left Side - Branding & Features */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-16 text-white">
-          <div className="max-w-xl">
+        <div className="hidden lg:flex lg:w-1/2 flex-col justify-start px-16 text-white pt-16">
+          <div className="max-w-xl sticky top-0">
             {/* Logo & Brand */}
             <div className="flex items-center gap-4 mb-12">
               <div className="relative">
@@ -181,11 +181,11 @@ const AuthPage = () => {
               <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40">
                 <Target className="h-7 w-7 text-white" />
               </div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">HireOn</h1>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">HireOn</h1>
             </div>
 
             {/* Auth Form Container */}
-            <div className="relative mb-140">
+            <div className="relative mb-140 min-h-[600px]">
               {/* Enhanced glassmorphism background */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-slate-50/5 to-transparent backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl"></div>
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
@@ -219,7 +219,7 @@ const AuthPage = () => {
                 {/* Form */}
                 <div className="space-y-6">
                   {isLogin ? (
-                    <LoginForm onSwitchToSignup={() => setIsLogin(false)} />
+                    <LoginForm />
                   ) : (
                     <SignupForm onSwitchToLogin={() => setIsLogin(true)} />
                   )}

@@ -70,9 +70,9 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
     trial: {
       name: 'Trial Week',
       price: 99,
-      duration: '7 days',
+      duration: '2 days',
       features: [
-        '5 interview sessions',
+        
         'Basic AI feedback',
         'Resume upload',
         'Email support',

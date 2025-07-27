@@ -56,9 +56,9 @@ const SuccessPage = ({ onBack }) => {
     try {
       // Try modern clipboard API first
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(deepLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(deepLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
       } else {
         // Fallback for older browsers or when clipboard permission is denied
         const textArea = document.createElement('textarea');
@@ -144,7 +144,7 @@ Or if the app is in a different location:
     try {
       // Try the primary deep link first
       console.log('Attempting to open deep link:', deepLink);
-      window.location.href = deepLink;
+    window.location.href = deepLink;
       
       // Set a timeout to try fallback schemes
       setTimeout(() => {
@@ -238,25 +238,25 @@ Or if the app is in a different location:
       const downloadUrl = `${API_BASE_URL}/api/download/${platform}`;
       
       console.log(`Starting download for ${platform} from:`, downloadUrl);
-      
+
       // Create a temporary anchor element for download
-      const link = document.createElement('a');
+    const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
+    link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
       link.target = '_blank'; // Open in new tab as fallback
       
       // Append to DOM, click, and remove
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-      // Update UI state
-      setDownloadStarted(prev => ({ ...prev, [platform]: true }));
+    // Update UI state
+    setDownloadStarted(prev => ({ ...prev, [platform]: true }));
 
-      // Reset state after 3 seconds
-      setTimeout(() => {
-        setDownloadStarted(prev => ({ ...prev, [platform]: false }));
-      }, 3000);
+    // Reset state after 3 seconds
+    setTimeout(() => {
+      setDownloadStarted(prev => ({ ...prev, [platform]: false }));
+    }, 3000);
 
       // Track download event
       console.log(`Download requested for ${platform}`);

@@ -55,24 +55,24 @@ const DownloadPage = () => {
         alert(message);
       } else {
         // Create a temporary anchor element for download
-        const link = document.createElement('a');
+    const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
+    link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
         link.target = '_blank'; // Open in new tab as fallback
         
         // Append to DOM, click, and remove
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
       }
 
-      // Update UI state
-      setDownloadStarted(prev => ({ ...prev, [platform]: true }));
+    // Update UI state
+    setDownloadStarted(prev => ({ ...prev, [platform]: true }));
 
-      // Reset state after 3 seconds
-      setTimeout(() => {
-        setDownloadStarted(prev => ({ ...prev, [platform]: false }));
-      }, 3000);
+    // Reset state after 3 seconds
+    setTimeout(() => {
+      setDownloadStarted(prev => ({ ...prev, [platform]: false }));
+    }, 3000);
 
       // Track download event
       console.log(`Download requested for ${platform}`);

@@ -1,9 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
+import IntroPage from './components/IntroPage';
 import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
 import PricingSection from './components/PricingSection';
 import DownloadPage from './components/DownloadPage';
+import ScrollToTop from './components/ScrollToTop';
 import { Loader2 } from 'lucide-react';
 import './App.css';
 
@@ -46,8 +48,14 @@ const PublicRoute = ({ children }) => {
 function AppContent() {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         {/* Public Routes */}
+        <Route 
+          path="/" 
+          element={<IntroPage />} 
+        />
+        
         <Route 
           path="/auth" 
           element={
@@ -76,12 +84,9 @@ function AppContent() {
             </ProtectedRoute>
           } 
         />
-
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/auth" replace />} />
         
         {/* Catch all route */}
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

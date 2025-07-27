@@ -22,7 +22,7 @@ const PricingSection = () => {
       icon: <Star className="h-6 w-6" />,
       color: 'from-green-500 to-emerald-600',
       features: [
-        '5 interview sessions',
+      
         'Basic AI feedback',
         'Email support',
         'Try premium features'
@@ -45,10 +45,8 @@ const PricingSection = () => {
       features: [
         'Unlimited interview sessions',
         'Advanced AI feedback',
-        'Resume analysis & optimization',
         'Priority support',
         'Advanced analytics',
-        'Interview recordings',
         'Custom question sets'
       ],
       limitations: []
@@ -68,8 +66,8 @@ const PricingSection = () => {
         'Everything in Monthly',
         '2 months free (17% savings)',
         'Exclusive interview templates',
-        'Career guidance sessions',
-        'Premium badge',
+       
+        
         'Early access to new features',
         'Dedicated account manager'
       ],
@@ -186,11 +184,11 @@ const PricingSection = () => {
                 </Button>
 
                 {/* Additional info */}
-                <p className="text-xs text-center text-gray-500">
+                {/* <p className="text-xs text-center text-gray-500">
                   {plan.id === 'trial' ? 'No commitment • Cancel anytime' :
                    plan.id === 'monthly' ? 'Cancel anytime • Full refund in 7 days' :
                    'Best value • Cancel anytime'}
-                </p>
+                </p> */}
               </CardContent>
             </Card>
           ))}
@@ -199,21 +197,18 @@ const PricingSection = () => {
         {/* FAQ or Additional Info */}
         <div className="mt-16 text-center">
           <p className="text-gray-600 mb-4">
-            All plans include secure payment processing and 24/7 customer support
+            All plans include secure payment processing and customer support
           </p>
           <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
               <span>Secure payments</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Cancel anytime</span>
-            </div>
-            <div className="flex items-center gap-2">
+            
+            {/* <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
               <span>24/7 support</span>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
