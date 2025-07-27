@@ -1595,11 +1595,11 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
       .single();
 
     if (error || !user) {
-      // Don't reveal if user exists or not for security
+      // Show clear error for non-existent users
       logger.info(`Password reset requested for non-existent email: ${email}`);
-      return res.json({
-        success: true,
-        message: 'If an account with that email exists, a password reset link has been sent.'
+      return res.status(404).json({
+        success: false,
+        error: 'User does not exist with this email address'
       });
     }
 
