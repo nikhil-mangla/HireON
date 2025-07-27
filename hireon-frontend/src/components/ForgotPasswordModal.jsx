@@ -17,14 +17,17 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
     setError('');
 
     try {
+      console.log('Sending forgot password request for:', email);
       const response = await authAPI.forgotPassword({ email });
+      console.log('Forgot password response:', response);
       
       if (response.success) {
         setSuccess(true);
       } else {
         setError(response.error || 'Failed to send reset email');
       }
-    } catch {
+    } catch (error) {
+      console.error('Forgot password error:', error);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
