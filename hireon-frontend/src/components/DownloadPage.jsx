@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Download, Monitor, Apple, CheckCircle, Star, Users, Shield, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -6,6 +6,26 @@ import { Badge } from './ui/badge';
 
 const DownloadPage = () => {
   const [downloadStarted, setDownloadStarted] = useState({ windows: false, mac: false });
+
+  // Handle direct download parameter on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const platform = urlParams.get('platform');
+    const isDirectDownload = urlParams.get('direct') === 'true';
+    
+    if (isDirectDownload && platform) {
+      // Show download instructions immediately
+      const message = `🚀 HireOn Desktop App Download\n\n` +
+                     `Platform: ${platform.toUpperCase()}\n\n` +
+                     `Since the desktop app is still in development, here are your options:\n\n` +
+                     `1. Use the web version at ${window.location.origin}\n` +
+                     `2. Try the "Open App" feature if you have the development version\n` +
+                     `3. Contact us for early access to the desktop app\n\n` +
+                     `Thank you for your interest! 🎯`;
+      
+      alert(message);
+    }
+  }, []);
 
   const handleDownload = async (platform) => {
     try {
