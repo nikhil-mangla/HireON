@@ -169,13 +169,19 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Email configuration
-const emailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
+let emailTransporter = null;
+
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+  emailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
+} else {
+  logger.warn('Email credentials not configured. Password reset emails will not be sent.');
+}
 
 // Function to send password reset email
 const sendPasswordResetEmail = async (email, resetToken) => {
@@ -223,6 +229,11 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   };
 
   try {
+    if (!emailTransporter) {
+      logger.warn(`Email not configured. Would send password reset email to: ${email} with token: ${resetToken}`);
+      return true; // Return true to simulate success
+    }
+    
     await emailTransporter.sendMail(mailOptions);
     logger.info(`Password reset email sent to: ${email}`);
     return true;
