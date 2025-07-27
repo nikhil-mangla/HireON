@@ -79,7 +79,7 @@ const generalLimiter = rateLimit({
 // CORS configuration - more restrictive for production
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://yourdomain.com'] // Add your actual domains
+    ? [process.env.FRONTEND_URL, 'https://hire-on-nikhil-manglas-projects.vercel.app'] // Add your actual domains
     : ['http://localhost:5173', 'http://localhost:5180'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -162,6 +162,61 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Token blacklist for expired subscriptions
+const tokenBlacklist = new Set();
+
+// Function to blacklist a token
+const blacklistToken = (token) => {
+  tokenBlacklist.add(token);
+  // Remove from blacklist after 24 hours
+  setTimeout(() => {
+    tokenBlacklist.delete(token);
+  }, 24 * 60 * 60 * 1000);
+};
+
+// Function to blacklist all tokens for a user
+const blacklistUserTokens = (userId) => {
+  // Add a special marker for all user tokens
+  tokenBlacklist.add(`user_${userId}_all`);
+};
+
+// Middleware to check token blacklist
+const checkTokenBlacklist = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+      return next();
+    }
+    
+    // Check if token is blacklisted
+    if (tokenBlacklist.has(token)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token has been invalidated due to subscription expiration'
+      });
+    }
+    
+    // Check if all user tokens are blacklisted
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (tokenBlacklist.has(`user_${decoded.id}_all`)) {
+        return res.status(401).json({
+          success: false,
+          error: 'Token has been invalidated due to subscription expiration'
+        });
+      }
+    } catch (error) {
+      // Token is invalid, let the next middleware handle it
+    }
+    
+    next();
+  } catch (error) {
+    next();
+  }
+};
 
 // Input validation middleware
 const validateSignup = [
@@ -275,6 +330,8 @@ async function checkExpiredSubscriptions() {
         if (!updateError) {
           expiredCount++;
           logger.info(`📉 User ${user.email} subscription expired and downgraded to free`);
+          // Blacklist all tokens for this user
+          blacklistUserTokens(user.id);
         } else {
           logger.error(`❌ Failed to downgrade user ${user.email}:`, updateError);
         }
@@ -398,12 +455,14 @@ async function authenticateToken(req, res, next) {
           decoded.plan = 'free';
           decoded.verified = false;
           decoded.expires = null;
+          // Blacklist all tokens for this user
+          blacklistUserTokens(decoded.id);
         }
       }
-    }
+  }
 
-    req.user = decoded;
-    next();
+  req.user = decoded;
+  next();
   } catch (error) {
     logger.error('Subscription expiry check error:', error);
     // Continue with original token data if database update fails
@@ -416,7 +475,7 @@ async function authenticateToken(req, res, next) {
 app.post('/api/auth/signup', authLimiter, validateSignup, handleValidationErrors, async (req, res) => {
   try {
     const { email, password, name } = req.body;
-    
+
     // Check if user exists in Supabase
     const { data: existingUser } = await supabase
       .from('users')
@@ -470,6 +529,31 @@ app.post('/api/auth/signup', authLimiter, validateSignup, handleValidationErrors
     logger.error('Signup error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
+});
+
+// GET route for signup endpoint information
+app.get('/api/auth/signup', (req, res) => {
+  res.json({
+    success: false,
+    error: 'Method not allowed',
+    message: 'This endpoint only accepts POST requests',
+    requiredFields: {
+      email: 'string (valid email format)',
+      password: 'string (minimum 8 characters)',
+      name: 'string (2-50 characters)'
+    },
+    example: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        email: 'user@example.com',
+        password: 'password123',
+        name: 'John Doe'
+      }
+    }
+  });
 });
 
 // Login endpoint with enhanced security
@@ -533,6 +617,29 @@ app.post('/api/auth/login', authLimiter, validateLogin, handleValidationErrors, 
       error: 'Internal server error'
     });
   }
+});
+
+// GET route for login endpoint information
+app.get('/api/auth/login', (req, res) => {
+  res.json({
+    success: false,
+    error: 'Method not allowed',
+    message: 'This endpoint only accepts POST requests',
+    requiredFields: {
+      email: 'string (valid email format)',
+      password: 'string (required)'
+    },
+    example: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        email: 'user@example.com',
+        password: 'password123'
+      }
+    }
+  });
 });
 
 // Google OAuth login endpoint with enhanced security
@@ -650,8 +757,123 @@ app.post('/api/auth/google', authLimiter, async (req, res) => {
   }
 });
 
+// GET route for Google OAuth endpoint information
+app.get('/api/auth/google', (req, res) => {
+  res.json({
+    success: false,
+    error: 'Method not allowed',
+    message: 'This endpoint only accepts POST requests',
+    requiredFields: {
+      idToken: 'string (Google ID token from client-side authentication)'
+    },
+    example: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        idToken: 'google_id_token_here'
+      }
+    },
+    note: 'This endpoint requires Google OAuth client-side authentication to obtain the ID token'
+  });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Download endpoint for desktop app
+app.get('/api/download/:platform', (req, res) => {
+  const { platform } = req.params;
+  
+  const downloadUrls = {
+    windows: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
+    mac: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn.dmg'
+  };
+
+  if (!downloadUrls[platform]) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid platform. Supported platforms: windows, mac'
+    });
+  }
+
+  // Log download attempt
+  logger.info(`Download requested for platform: ${platform}`);
+
+  // Redirect to the actual download URL
+  res.redirect(downloadUrls[platform]);
+});
+
+// Get download URLs endpoint
+app.get('/api/download-urls', (req, res) => {
+  const downloadUrls = {
+    windows: {
+      url: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
+      filename: 'HireOn-Setup.exe',
+      size: '45.2 MB',
+      version: '2.1.0'
+    },
+    mac: {
+      url: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn.dmg',
+      filename: 'HireOn.dmg',
+      size: '52.8 MB',
+      version: '2.1.0'
+    }
+  };
+
+  res.json({
+    success: true,
+    downloads: downloadUrls,
+    message: 'Download URLs retrieved successfully'
+  });
+});
+
+// Root endpoint with API information
+app.get('/', (req, res) => {
+  res.json({
+    message: 'HireOn Backend API',
+    version: '1.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: {
+        signup: 'POST /api/auth/signup',
+        login: 'POST /api/auth/login',
+        google: 'POST /api/auth/google',
+        validateToken: 'POST /api/auth/validate-token',
+        checkSubscription: 'POST /api/auth/check-subscription',
+        trialEligibility: 'GET /api/auth/trial-eligibility'
+      },
+      user: {
+        profile: 'GET /api/user/profile',
+        updateProfile: 'PUT /api/user/profile',
+        subscriptionStatus: 'GET /api/user/subscription-status'
+      },
+      payment: {
+        createOrder: 'POST /api/razorpay/create-order',
+        verifyPayment: 'POST /api/razorpay/verify-payment',
+        webhook: 'POST /api/razorpay/webhook'
+      },
+      system: {
+        health: 'GET /api/health'
+      }
+    },
+    documentation: 'All endpoints return JSON responses. Authentication endpoints require POST requests with appropriate data.'
+  });
+});
+
+
+
 // Get user profile endpoint
-app.get('/api/user/profile', authenticateToken, async (req, res) => {
+app.get('/api/user/profile', checkTokenBlacklist, authenticateToken, async (req, res) => {
   logger.info('GET /api/user/profile called, user:', req.user);
   try {
     // Use email instead of id for lookup
@@ -666,11 +888,25 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
 
     // Check if subscription has expired and update if needed
     const now = Math.floor(Date.now() / 1000);
-    const isExpired = req.user.expires && now > req.user.expires;
-    
     let subscriptionStatus = user.subscription || 'free';
     let isVerified = user.isVerified || false;
-    let expires = req.user.expires;
+    let expires = null;
+    let isExpired = false;
+
+    // Calculate expiry based on database data
+    if (subscriptionStatus === 'trial') {
+      // Trial expires in 2 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (2 * 24 * 60 * 60);
+      isExpired = now > expires;
+    } else if (subscriptionStatus === 'monthly') {
+      // Monthly expires in 30 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (30 * 24 * 60 * 60);
+      isExpired = now > expires;
+    } else if (subscriptionStatus === 'annual') {
+      // Annual expires in 365 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (365 * 24 * 60 * 60);
+      isExpired = now > expires;
+    }
 
     // If subscription has expired, update to free
     if (isExpired && subscriptionStatus !== 'free') {
@@ -689,8 +925,12 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
         subscriptionStatus = 'free';
         isVerified = false;
         expires = null;
+        // Blacklist all tokens for this user
+        blacklistUserTokens(user.id);
       }
     }
+
+    logger.info(`Profile fetch for user ${user.email}: status=${subscriptionStatus}, isExpired=${isExpired}, expires=${expires ? new Date(expires * 1000).toISOString() : 'null'}`);
 
     res.json({
       id: user.id,
@@ -925,14 +1165,14 @@ app.post('/api/razorpay/verify-payment', authenticateToken, validatePayment, han
 
     // Prepare update data
     const updateData = {
-      subscription: subscriptionPlan,
-      isVerified: true,
-      updatedAt: new Date().toISOString()
+        subscription: subscriptionPlan,
+        isVerified: true,
+        updatedAt: new Date().toISOString()
     };
 
     // Track trial usage
     if (subscriptionPlan === 'trial') {
-      updateData.hasusedtrial = true;
+      updateData.hasUsedTrial = true;
     }
 
     const { data: updatedUser, error: updateError } = await supabase
@@ -1088,7 +1328,7 @@ app.post('/api/auth/validate-token', async (req, res) => {
 });
 
 // Check and refresh subscription status
-app.post('/api/auth/check-subscription', authenticateToken, async (req, res) => {
+app.post('/api/auth/check-subscription', checkTokenBlacklist, authenticateToken, async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
@@ -1104,11 +1344,37 @@ app.post('/api/auth/check-subscription', authenticateToken, async (req, res) => 
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const isExpired = req.user.expires && now > req.user.expires;
-    
     let subscriptionStatus = user.subscription || 'free';
     let isVerified = user.isVerified || false;
-    let expires = req.user.expires;
+    let expires = null;
+    let isExpired = false;
+
+    // Calculate expiry based on database data
+    if (subscriptionStatus === 'trial') {
+      // Trial expires in 2 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (2 * 24 * 60 * 60);
+      isExpired = now > expires;
+    } else if (subscriptionStatus === 'monthly') {
+      // Monthly expires in 30 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (30 * 24 * 60 * 60);
+      isExpired = now > expires;
+    } else if (subscriptionStatus === 'annual') {
+      // Annual expires in 365 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (365 * 24 * 60 * 60);
+      isExpired = now > expires;
+    }
+
+    logger.info(`Expiry calculation for user ${user.email}:`, {
+      subscription: subscriptionStatus,
+      updatedAt: user.updatedAt,
+      updatedAtTimestamp: new Date(user.updatedAt).getTime() / 1000,
+      now: now,
+      calculatedExpires: expires,
+      calculatedExpiresISO: expires ? new Date(expires * 1000).toISOString() : 'null',
+      isExpired: isExpired,
+      difference: expires ? expires - now : null,
+      differenceHours: expires ? Math.floor((expires - now) / 3600) : null
+    });
 
     // If subscription has expired, update to free
     if (isExpired && subscriptionStatus !== 'free') {
@@ -1127,6 +1393,8 @@ app.post('/api/auth/check-subscription', authenticateToken, async (req, res) => 
         subscriptionStatus = 'free';
         isVerified = false;
         expires = null;
+        // Blacklist all tokens for this user
+        blacklistUserTokens(req.user.id);
       }
     }
 
@@ -1148,6 +1416,8 @@ app.post('/api/auth/check-subscription', authenticateToken, async (req, res) => 
       subscriptionStatus,
       expiresIn
     );
+
+    logger.info(`Subscription check for user ${user.email}: status=${subscriptionStatus}, isExpired=${isExpired}, expires=${expires ? new Date(expires * 1000).toISOString() : 'null'}`);
 
     res.json({
       success: true,
@@ -1175,11 +1445,11 @@ app.post('/api/auth/check-subscription', authenticateToken, async (req, res) => 
 });
 
 // Check trial eligibility
-app.get('/api/auth/trial-eligibility', authenticateToken, async (req, res) => {
+app.get('/api/auth/trial-eligibility', checkTokenBlacklist, authenticateToken, async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('subscription, hasusedtrial')
+      .select('subscription, hasUsedTrial')
       .eq('id', req.user.id)
       .single();
 
@@ -1190,15 +1460,13 @@ app.get('/api/auth/trial-eligibility', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check if user has already used trial
-    const hasUsedTrial = user.hasusedtrial || false;
-    const isEligible = !hasUsedTrial;
+    const isEligible = !user.hasUsedTrial;
     const currentPlan = user.subscription || 'free';
 
     res.json({
       success: true,
       isEligible,
-      hasUsedTrial,
+      hasUsedTrial: user.hasUsedTrial || false,
       currentPlan,
       message: isEligible 
         ? 'You are eligible for a trial subscription' 
@@ -1206,6 +1474,116 @@ app.get('/api/auth/trial-eligibility', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     logger.error('Trial eligibility check error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Get subscription status endpoint
+app.get('/api/user/subscription-status', checkTokenBlacklist, authenticateToken, async (req, res) => {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    let subscriptionStatus = user.subscription || 'free';
+    let isVerified = user.isVerified || false;
+    let expires = null;
+    let isExpired = false;
+
+    // Calculate expiry based on database data
+    if (subscriptionStatus === 'trial') {
+      // Trial expires in 2 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (2 * 24 * 60 * 60);
+      isExpired = now > expires;
+    } else if (subscriptionStatus === 'monthly') {
+      // Monthly expires in 30 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (30 * 24 * 60 * 60);
+      isExpired = now > expires;
+    } else if (subscriptionStatus === 'annual') {
+      // Annual expires in 365 days from last update
+      expires = new Date(user.updatedAt).getTime() / 1000 + (365 * 24 * 60 * 60);
+      isExpired = now > expires;
+    }
+
+    // If subscription has expired, update to free
+    if (isExpired && subscriptionStatus !== 'free') {
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({
+          subscription: 'free',
+          isVerified: false,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', req.user.id)
+        .select()
+        .single();
+
+      if (!updateError && updatedUser) {
+        subscriptionStatus = 'free';
+        isVerified = false;
+        expires = null;
+        // Blacklist all tokens for this user
+        blacklistUserTokens(req.user.id);
+      }
+    }
+
+    // Calculate time remaining
+    let timeRemaining = null;
+    if (expires) {
+      const difference = expires - now;
+      if (difference > 0) {
+        const days = Math.floor(difference / (24 * 60 * 60));
+        const hours = Math.floor((difference % (24 * 60 * 60)) / (60 * 60));
+        const minutes = Math.floor((difference % (60 * 60)) / 60);
+        
+        if (days > 0) {
+          timeRemaining = `${days} day${days > 1 ? 's' : ''}, ${hours} hour${hours > 1 ? 's' : ''}`;
+        } else if (hours > 0) {
+          timeRemaining = `${hours} hour${hours > 1 ? 's' : ''}, ${minutes} minute${minutes > 1 ? 's' : ''}`;
+        } else {
+          timeRemaining = `${minutes} minute${minutes > 1 ? 's' : ''}`;
+        }
+      } else {
+        timeRemaining = 'Expired';
+      }
+    }
+
+    logger.info(`Subscription status for user ${user.email}: status=${subscriptionStatus}, isExpired=${isExpired}, expires=${expires ? new Date(expires * 1000).toISOString() : 'null'}, timeRemaining=${timeRemaining}`);
+
+    res.json({
+      success: true,
+      subscription: subscriptionStatus,
+      isVerified,
+      expires,
+      isExpired,
+      timeRemaining,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        plan: subscriptionStatus,
+        verified: isVerified,
+        expires: expires
+      },
+      message: isExpired 
+        ? 'Your subscription has expired. Please renew to continue accessing premium features.'
+        : `Your ${subscriptionStatus} subscription is active.`
+    });
+  } catch (error) {
+    logger.error('Subscription status check error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -1289,7 +1667,7 @@ app.post('/api/verify-payment', async (req, res) => {
         // Check if user is trying to get a trial
         if (subscriptionPlan === 'trial') {
           // Check if user has already used trial
-          if (user.hasusedtrial) {
+          if (user.hasUsedTrial) {
             return res.status(400).json({
               success: false,
               error: 'Trial can only be used once per user. Please choose a different plan.'
@@ -1302,9 +1680,32 @@ app.post('/api/verify-payment', async (req, res) => {
           expiresIn = '30d';
         }
 
-        // For now, skip database update and just generate a new token
-        // This allows the payment to succeed without requiring database schema changes
-        const token = generateToken(user, subscriptionPlan, expiresIn);
+        // Prepare update data
+        const updateData = {
+          subscription: subscriptionPlan,
+          isVerified: true,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Track trial usage
+        if (subscriptionPlan === 'trial') {
+          updateData.hasUsedTrial = true;
+        }
+
+        // Update user in database
+        const { data: updatedUser, error: updateError } = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('id', user.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          logger.error('Failed to update user subscription:', updateError);
+          return res.status(500).json({ error: 'Failed to update user subscription' });
+        }
+
+        const token = generateToken(updatedUser, subscriptionPlan, expiresIn);
 
         return res.json({
           success: true,
@@ -1600,6 +2001,17 @@ app.get('/api/debug/user/:email', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
+    const now = Math.floor(Date.now() / 1000);
+    let expires = null;
+    
+    if (user.subscription === 'trial') {
+      expires = new Date(user.updatedAt).getTime() / 1000 + (2 * 24 * 60 * 60);
+    } else if (user.subscription === 'monthly') {
+      expires = new Date(user.updatedAt).getTime() / 1000 + (30 * 24 * 60 * 60);
+    } else if (user.subscription === 'annual') {
+      expires = new Date(user.updatedAt).getTime() / 1000 + (365 * 24 * 60 * 60);
+    }
+    
     res.json({
       user: {
         id: user.id,
@@ -1607,8 +2019,19 @@ app.get('/api/debug/user/:email', async (req, res) => {
         name: user.name,
         subscription: user.subscription,
         isVerified: user.isVerified,
+        hasUsedTrial: user.hasUsedTrial,
         updatedAt: user.updatedAt,
         createdAt: user.createdAt
+      },
+      calculation: {
+        now: now,
+        nowISO: new Date(now * 1000).toISOString(),
+        updatedAtTimestamp: new Date(user.updatedAt).getTime() / 1000,
+        calculatedExpires: expires,
+        calculatedExpiresISO: expires ? new Date(expires * 1000).toISOString() : 'null',
+        difference: expires ? expires - now : null,
+        differenceHours: expires ? Math.floor((expires - now) / 3600) : null,
+        differenceDays: expires ? Math.floor((expires - now) / (24 * 3600)) : null
       }
     });
   } catch (error) {
@@ -1616,39 +2039,39 @@ app.get('/api/debug/user/:email', async (req, res) => {
   }
 });
 
+// Database schema check endpoint
+app.get('/api/debug/schema', async (req, res) => {
+  try {
+    // Check if hasUsedTrial column exists by trying to select it
+    const { data: testUser, error } = await supabase
+      .from('users')
+      .select('hasUsedTrial')
+      .limit(1);
+    
+    if (error) {
+      return res.json({
+        hasUsedTrialColumn: false,
+        error: error.message,
+        message: 'hasUsedTrial column does not exist in the users table. Please add it manually.'
+      });
+    }
+    
+    res.json({
+      hasUsedTrialColumn: true,
+      message: 'hasUsedTrial column exists and is accessible',
+      sampleData: testUser
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🚀 HireOn Backend Server running on port ${PORT}`);
-  logger.info('📋 Available endpoints:');
-  logger.info('  POST /api/auth/signup - User registration');
-  logger.info('  POST /api/auth/login - User login');
-  logger.info('  POST /api/auth/google - Google OAuth login');
-  logger.info('  GET  /api/user/profile - Get user profile (requires auth)');
-  logger.info('  PUT  /api/user/profile - Update user profile (requires auth)');
-  logger.info('  POST /api/razorpay/create-order - Create Razorpay order (requires auth)');
-  logger.info('  POST /api/razorpay/verify-payment - Verify Razorpay payment (requires auth)');
-  logger.info('  POST /api/razorpay/webhook - Razorpay webhook handler');
-  logger.info('  POST /api/verify-payment - Legacy payment verification');
-  logger.info('  POST /api/auth/validate-token - Validate JWT token');
-  logger.info('  POST /api/auth/check-subscription - Check and refresh subscription status (requires auth)');
-  logger.info('  GET  /api/auth/trial-eligibility - Check if user is eligible for trial (requires auth)');
-  logger.info('  POST /api/admin/check-all-subscriptions - Manual subscription expiry check (admin only)');
-  logger.info('  POST /api/generate-deep-link - Generate deep link for Electron app (requires auth)');
-  logger.info('  POST /api/validate-electron-token - Validate Electron app token');
-  logger.info('  POST /api/generate-token-file - Generate token file for manual import (requires auth)');
-  logger.info('  GET  /api/health - Health check');
-  logger.info('');
-  logger.info('🔧 Environment:');
-  logger.info(`  - JWT Secret: ${JWT_SECRET ? 'Configured' : 'Not configured'}`);
-  logger.info(`  - Razorpay Key ID: ${process.env.RAZORPAY_KEY_ID ? 'Configured' : 'Not configured'}`);
-  logger.info(`  - Razorpay Webhook Secret: ${process.env.RAZORPAY_WEBHOOK_SECRET ? 'Configured' : 'Not configured'}`);
-  logger.info(`  - Admin Secret Key: ${process.env.ADMIN_SECRET_KEY ? 'Configured' : 'Not configured'}`);
-  logger.info('');
-  logger.info('⏰ Subscription Management:');
-  logger.info('  - Automatic expiry check: Every hour');
-  logger.info('  - Real-time expiry detection: On every API call');
-  logger.info('  - Auto-downgrade to free: When subscription expires');
-  logger.info('  - Trial duration: 2 days (limited to once per user)');
+ 
 
   // Print all registered routes for debugging
   if (app._router && app._router.stack) {

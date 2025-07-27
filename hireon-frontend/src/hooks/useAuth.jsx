@@ -162,6 +162,7 @@ export const AuthProvider = ({ children }) => {
     getSubscriptionStatus,
     getTimeRemaining,
     isTokenExpired: () => user ? isTokenExpired(user) : false,
+    setAuthToken, // Add setAuthToken to the context
   };
 
   return (

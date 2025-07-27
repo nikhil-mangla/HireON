@@ -33,12 +33,14 @@ import {
   Calendar,
   StopCircle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+
+import { authAPI } from '../lib/api'; // Import authAPI for subscription checking
+import { useRef } from 'react';
 
 
 const Dashboard = () => {
-  const { user, logout, loading } = useAuth();
-  const navigate = useNavigate();
+  const { user, logout, loading, updateUser, setAuthToken } = useAuth(); // Added updateUser and setAuthToken
+  const hasRefreshedRef = useRef(false);
   
   // Debug: Log user state changes
   useEffect(() => {
@@ -56,22 +58,139 @@ const Dashboard = () => {
   });
   const [savedSessionData, setSavedSessionData] = useState(null); // New state to store saved session data
 
+  // Force refresh user data on component mount to get latest expiry time
+  useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        console.log('Refreshing user data on component mount...');
+        const response = await authAPI.checkSubscription();
+        if (response.success) {
+          const { subscription, isVerified, expires, token } = response;
+          
+          const updatedUserData = {
+            ...user,
+            plan: subscription,
+            verified: isVerified,
+            expires: expires
+          };
+          
+          console.log('Updated user data on mount:', {
+            expires: expires ? new Date(expires * 1000).toISOString() : 'null',
+            plan: subscription,
+            verified: isVerified
+          });
+          
+          updateUser(updatedUserData);
+          
+          if (token) {
+            setAuthToken(token);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refresh user data on mount:', error);
+      }
+    };
+    
+    if (user && !hasRefreshedRef.current) {
+      hasRefreshedRef.current = true;
+      refreshUserData();
+    }
+  }, [user]); // Only run when user changes and we haven't refreshed yet
+
+  // Real-time subscription status checking
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      try {
+        const response = await authAPI.checkSubscription();
+        if (response.success) {
+          const { subscription, isVerified, expires, isExpired, token } = response;
+          
+          // Always update user state with latest data from backend
+          const updatedUserData = {
+            ...user,
+            plan: subscription,
+            verified: isVerified,
+            expires: expires
+          };
+          
+          // Check if any data has changed significantly (ignore small time differences)
+          const hasSignificantChange = (
+            subscription !== user?.plan || 
+            isVerified !== user?.verified || 
+            (user?.expires && Math.abs(expires - user.expires) > 60) // Only update if expiry differs by more than 60 seconds
+          );
+          
+          if (hasSignificantChange && user) {
+            console.log('Updating user state with new data:', {
+              oldExpires: user?.expires ? new Date(user.expires * 1000).toISOString() : 'null',
+              newExpires: expires ? new Date(expires * 1000).toISOString() : 'null',
+              oldPlan: user?.plan,
+              newPlan: subscription,
+              oldVerified: user?.verified,
+              newVerified: isVerified,
+              timeDifference: user?.expires ? Math.abs(expires - user.expires) : 'N/A'
+            });
+            
+            updateUser(updatedUserData);
+            
+            // Show notification if subscription expired
+            if (isExpired && subscription === 'free') {
+              console.log('Subscription expired - user downgraded to free');
+              // You can add a toast notification here if you have a toast library
+            }
+          }
+          
+          // Update auth token if new one provided
+          if (token) {
+            setAuthToken(token);
+          }
+        }
+      } catch (error) {
+        console.error('Subscription status check failed:', error);
+        // If token is invalid, redirect to login
+        if (error.response?.status === 401) {
+          logout();
+        }
+      }
+    };
+    
+    // Check subscription status after a delay and then every 5 minutes
+    const initialDelay = setTimeout(checkSubscriptionStatus, 10000); // 10 second delay
+    const interval = setInterval(checkSubscriptionStatus, 5 * 60 * 1000); // 5 minutes
+    
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
+  }, [user?.plan, user?.verified]); // Only depend on plan and verified status, not expires
+
   // Calculate subscription expiry
   useEffect(() => {
     if (user?.expires) {
       const updateTimeRemaining = () => {
-        const now = new Date().getTime();
-        const expiry = new Date(user.expires * 1000).getTime();
+        const now = Math.floor(Date.now() / 1000); // Current time in seconds
+        const expiry = user.expires; // Already in seconds from backend
         const difference = expiry - now;
 
+        console.log('Time calculation debug:', {
+          now: new Date(now * 1000).toISOString(),
+          expiry: new Date(expiry * 1000).toISOString(),
+          difference: difference,
+          differenceHours: Math.floor(difference / 3600),
+          differenceDays: Math.floor(difference / (24 * 3600))
+        });
+
         if (difference > 0) {
-          const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-          const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const days = Math.floor(difference / (24 * 60 * 60));
+          const hours = Math.floor((difference % (24 * 60 * 60)) / (60 * 60));
+          const minutes = Math.floor((difference % (60 * 60)) / 60);
           
           if (days > 0) {
-            setTimeRemaining(`${days} days, ${hours} hours`);
+            setTimeRemaining(`${days} day${days > 1 ? 's' : ''}, ${hours} hour${hours > 1 ? 's' : ''}`);
+          } else if (hours > 0) {
+            setTimeRemaining(`${hours} hour${hours > 1 ? 's' : ''}, ${minutes} minute${minutes > 1 ? 's' : ''}`);
           } else {
-            setTimeRemaining(`${hours} hours`);
+            setTimeRemaining(`${minutes} minute${minutes > 1 ? 's' : ''}`);
           }
         } else {
           setTimeRemaining('Expired');
@@ -79,15 +198,19 @@ const Dashboard = () => {
       };
 
       updateTimeRemaining();
-      const interval = setInterval(updateTimeRemaining, 60000);
+      const interval = setInterval(updateTimeRemaining, 60000); // Update every minute
 
       return () => clearInterval(interval);
+    } else {
+      setTimeRemaining('');
     }
   }, [user?.expires]);
 
   const isSubscriptionExpired = () => {
     if (!user?.expires) return false;
-    return new Date().getTime() > (user.expires * 1000);
+    const now = Math.floor(Date.now() / 1000); // Current time in seconds
+    const expiry = user.expires; // Already in seconds from backend
+    return now > expiry;
   };
 
   const getSubscriptionStatus = () => {
@@ -163,10 +286,12 @@ const Dashboard = () => {
   };
 
   const handleStartInterviewNow = () => {
-    if (savedSessionData) {
-      navigate('/interview', { state: savedSessionData });
-    }
+    console.log('Starting interview session...');
+    // Add your interview logic here
+    alert('Interview session started!');
   };
+
+
 
   // Show loading state while fetching user data
   if (loading) {
@@ -382,6 +507,8 @@ const Dashboard = () => {
                     </div>
                   </Button>
                 </div>
+
+
 
                 {/* Session Details Display */}
                 {savedSessionData && (

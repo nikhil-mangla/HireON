@@ -68,6 +68,21 @@ export const authAPI = {
     const response = await api.put('/api/user/profile', profileData);
     return response.data;
   },
+
+  checkSubscription: async () => {
+    const response = await api.post('/api/auth/check-subscription');
+    return response.data;
+  },
+
+  getSubscriptionStatus: async () => {
+    const response = await api.get('/api/user/subscription-status');
+    return response.data;
+  },
+
+  checkTrialEligibility: async () => {
+    const response = await api.get('/api/auth/trial-eligibility');
+    return response.data;
+  },
 };
 
 // Payment API functions

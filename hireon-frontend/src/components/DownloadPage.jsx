@@ -7,28 +7,44 @@ import { Badge } from './ui/badge';
 const DownloadPage = () => {
   const [downloadStarted, setDownloadStarted] = useState({ windows: false, mac: false });
 
-  const handleDownload = (platform) => {
-    // Mock download URLs - replace with actual download links
-    const downloadUrls = {
-      windows: 'https://github.com/your-repo/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
-      mac: 'https://github.com/your-repo/hireon-desktop/releases/latest/download/HireOn.dmg'
-    };
+  const handleDownload = async (platform) => {
+    try {
+      // Use backend API for download
+      const downloadUrl = `${import.meta.env.VITE_API_URL || 'https://hireon-aiel.onrender.com'}/api/download/${platform}`;
+      
+      // Create a temporary anchor element for download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
+      link.target = '_blank'; // Open in new tab as fallback
+      
+      // Append to DOM, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-    // Start download
-    const link = document.createElement('a');
-    link.href = downloadUrls[platform];
-    link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Update UI state
+      setDownloadStarted(prev => ({ ...prev, [platform]: true }));
 
-    // Update UI state
-    setDownloadStarted(prev => ({ ...prev, [platform]: true }));
+      // Reset state after 3 seconds
+      setTimeout(() => {
+        setDownloadStarted(prev => ({ ...prev, [platform]: false }));
+      }, 3000);
 
-    // Reset state after 3 seconds
-    setTimeout(() => {
-      setDownloadStarted(prev => ({ ...prev, [platform]: false }));
-    }, 3000);
+      // Track download event
+      console.log(`Download started for ${platform}`);
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      
+      // Fallback to direct GitHub URLs
+      const fallbackUrls = {
+        windows: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
+        mac: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn.dmg'
+      };
+      
+      window.open(fallbackUrls[platform], '_blank');
+    }
   };
 
   const features = [
