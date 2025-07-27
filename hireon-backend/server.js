@@ -79,7 +79,11 @@ const generalLimiter = rateLimit({
 // CORS configuration - more restrictive for production
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://hire-on-nikhil-manglas-projects.vercel.app'] // Add your actual domains
+    ? [
+        process.env.FRONTEND_URL, 
+        'https://hire-on-nikhil-manglas-projects.vercel.app',
+        'https://hireon-rho.vercel.app' // Add new frontend domain
+      ]
     : ['http://localhost:5173', 'http://localhost:5180'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

@@ -8,6 +8,7 @@ const API_BASE_URL = localStorage.getItem('API_OVERRIDE') ||
 
 console.log('API Base URL:', API_BASE_URL); // Debug log
 console.log('Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL); // Debug environment variable
+console.log('Current domain:', window.location.hostname); // Debug current domain
 
 // Create axios instance
 const api = axios.create({
