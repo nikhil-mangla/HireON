@@ -797,9 +797,11 @@ app.get('/api/health', (req, res) => {
 app.get('/api/download/:platform', (req, res) => {
   const { platform } = req.params;
   
+  // For now, serve placeholder files or redirect to a proper download
+  // You can upload your actual .dmg and .exe files to the backend
   const downloadUrls = {
-    windows: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
-    mac: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn.dmg'
+    windows: 'https://hireon-aiel.onrender.com/downloads/HireOn-Setup.exe',
+    mac: 'https://hireon-aiel.onrender.com/downloads/HireOn.dmg'
   };
 
   if (!downloadUrls[platform]) {
@@ -812,31 +814,36 @@ app.get('/api/download/:platform', (req, res) => {
   // Log download attempt
   logger.info(`Download requested for platform: ${platform}`);
 
-  // Redirect to the actual download URL
-  res.redirect(downloadUrls[platform]);
+  // For now, redirect to a download page with instructions
+  // This prevents the GitHub 404 error
+  const downloadPageUrl = `https://hireon-rho.vercel.app/download?platform=${platform}&direct=true`;
+  res.redirect(downloadPageUrl);
 });
 
 // Get download URLs endpoint
 app.get('/api/download-urls', (req, res) => {
   const downloadUrls = {
     windows: {
-      url: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
+      url: 'https://hireon-rho.vercel.app/download?platform=windows',
       filename: 'HireOn-Setup.exe',
-      size: '45.2 MB',
-      version: '2.1.0'
+      size: 'Coming Soon',
+      version: 'Coming Soon',
+      status: 'preparing'
     },
     mac: {
-      url: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn.dmg',
+      url: 'https://hireon-rho.vercel.app/download?platform=mac',
       filename: 'HireOn.dmg',
-      size: '52.8 MB',
-      version: '2.1.0'
+      size: 'Coming Soon',
+      version: 'Coming Soon',
+      status: 'preparing'
     }
   };
 
   res.json({
     success: true,
     downloads: downloadUrls,
-    message: 'Download URLs retrieved successfully'
+    message: 'Download information retrieved successfully. Desktop app is being prepared for release.',
+    note: 'The desktop app is currently in development. Please check back soon for the official release.'
   });
 });
 

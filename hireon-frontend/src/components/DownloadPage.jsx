@@ -18,16 +18,33 @@ const DownloadPage = () => {
       
       console.log(`Starting download for ${platform} from:`, downloadUrl);
       
-      // Create a temporary anchor element for download
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
-      link.target = '_blank'; // Open in new tab as fallback
+      // Check if we have direct download parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const isDirectDownload = urlParams.get('direct') === 'true';
       
-      // Append to DOM, click, and remove
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (isDirectDownload) {
+        // Show download instructions instead of redirecting to GitHub
+        const message = `🚀 HireOn Desktop App Download\n\n` +
+                       `Platform: ${platform.toUpperCase()}\n\n` +
+                       `Since the desktop app is still in development, here are your options:\n\n` +
+                       `1. Use the web version at ${window.location.origin}\n` +
+                       `2. Try the "Open App" feature if you have the development version\n` +
+                       `3. Contact us for early access to the desktop app\n\n` +
+                       `Thank you for your interest! 🎯`;
+        
+        alert(message);
+      } else {
+        // Create a temporary anchor element for download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
+        link.target = '_blank'; // Open in new tab as fallback
+        
+        // Append to DOM, click, and remove
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
       // Update UI state
       setDownloadStarted(prev => ({ ...prev, [platform]: true }));
@@ -38,41 +55,36 @@ const DownloadPage = () => {
       }, 3000);
 
       // Track download event
-      console.log(`Download started for ${platform}`);
+      console.log(`Download requested for ${platform}`);
       
     } catch (error) {
       console.error('Download failed:', error);
       
-      // Fallback to direct GitHub URLs
-      const fallbackUrls = {
-        windows: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
-        mac: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn.dmg'
-      };
-      
-      window.open(fallbackUrls[platform], '_blank');
+      // Show user-friendly error message instead of redirecting to GitHub
+      alert(`Sorry, the download is not available yet.\n\nPlease try:\n• Using the web version\n• Contacting us for early access\n• Checking back soon for the official release!`);
     }
   };
 
   const features = [
     {
+      icon: <Monitor className="h-6 w-6" />,
+      title: "Cross-Platform",
+      description: "Available for Windows and macOS (Coming Soon)"
+    },
+    {
       icon: <Zap className="h-6 w-6" />,
       title: "Lightning Fast",
-      description: "Native performance with instant startup and smooth interactions"
+      description: "Native performance with instant startup"
     },
     {
       icon: <Shield className="h-6 w-6" />,
       title: "Secure & Private",
-      description: "Your data stays local with end-to-end encryption"
+      description: "Your data stays on your device"
     },
     {
-      icon: <Monitor className="h-6 w-6" />,
-      title: "Offline Ready",
-      description: "Practice interviews even without internet connection"
-    },
-    {
-      icon: <Star className="h-6 w-6" />,
-      title: "Premium Features",
-      description: "Access exclusive desktop-only features and shortcuts"
+      icon: <Users className="h-6 w-6" />,
+      title: "Offline Access",
+      description: "Work without internet connection"
     }
   ];
 

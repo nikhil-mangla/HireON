@@ -230,8 +230,14 @@ Or if the app is in a different location:
 
   const handleDesktopDownload = async (platform) => {
     try {
-      // Use backend API for download
-      const downloadUrl = `${import.meta.env.VITE_API_URL || 'https://hireon-aiel.onrender.com'}/api/download/${platform}`;
+      // Use the same API base URL logic as the main API configuration
+      const API_BASE_URL = localStorage.getItem('API_OVERRIDE') || 
+                           import.meta.env.VITE_API_BASE_URL || 
+                           'https://hireon-aiel.onrender.com';
+      
+      const downloadUrl = `${API_BASE_URL}/api/download/${platform}`;
+      
+      console.log(`Starting download for ${platform} from:`, downloadUrl);
       
       // Create a temporary anchor element for download
       const link = document.createElement('a');
@@ -253,18 +259,13 @@ Or if the app is in a different location:
       }, 3000);
 
       // Track download event
-      console.log(`Download started for ${platform}`);
+      console.log(`Download requested for ${platform}`);
       
     } catch (error) {
       console.error('Download failed:', error);
       
-      // Fallback to direct GitHub URLs
-      const fallbackUrls = {
-        windows: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn-Setup.exe',
-        mac: 'https://github.com/nikhilmangla/hireon-desktop/releases/latest/download/HireOn.dmg'
-      };
-      
-      window.open(fallbackUrls[platform], '_blank');
+      // Show user-friendly error message instead of redirecting to GitHub
+      alert(`Sorry, the download is not available yet.\n\nPlease try:\n• Using the web version\n• Contacting us for early access\n• Checking back soon for the official release!`);
     }
   };
 
