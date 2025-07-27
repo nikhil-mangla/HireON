@@ -9,8 +9,14 @@ const DownloadPage = () => {
 
   const handleDownload = async (platform) => {
     try {
-      // Use backend API for download
-      const downloadUrl = `${import.meta.env.VITE_API_URL || 'https://hireon-aiel.onrender.com'}/api/download/${platform}`;
+      // Use the same API base URL logic as the main API configuration
+      const API_BASE_URL = localStorage.getItem('API_OVERRIDE') || 
+                           import.meta.env.VITE_API_BASE_URL || 
+                           'https://hireon-aiel.onrender.com';
+      
+      const downloadUrl = `${API_BASE_URL}/api/download/${platform}`;
+      
+      console.log(`Starting download for ${platform} from:`, downloadUrl);
       
       // Create a temporary anchor element for download
       const link = document.createElement('a');

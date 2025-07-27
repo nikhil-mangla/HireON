@@ -1837,7 +1837,7 @@ app.post('/api/generate-deep-link', authenticateToken, async (req, res) => {
     );
 
     // Generate the deep link URL
-    const deepLinkUrl = `learncodeapp://auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
+    const deepLinkUrl = `hireon://auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
     
     // Also generate a fallback URL for manual copy
     const fallbackData = {

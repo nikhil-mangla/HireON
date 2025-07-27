@@ -59,7 +59,20 @@ const SuccessPage = ({ onBack }) => {
   };
 
   const openDeepLink = () => {
-    window.location.href = deepLink;
+    try {
+      // Try to open the deep link
+      window.location.href = deepLink;
+      
+      // Set a timeout to check if the app opened
+      setTimeout(() => {
+        // If we're still on the same page after 2 seconds, the app probably didn't open
+        // Show a message to the user
+        alert('If the HireOn desktop app didn\'t open automatically, please:\n\n1. Make sure you have the HireOn desktop app installed\n2. Copy the link below and paste it in your browser\n3. Or download the app from the download page');
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to open deep link:', error);
+      alert('Failed to open the app. Please copy the link and paste it in your browser.');
+    }
   };
 
   const downloadTokenFile = async () => {
