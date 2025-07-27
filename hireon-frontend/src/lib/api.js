@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// Updated to use production backend URL - Force rebuild
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hireon-aiel.onrender.com';
+// Check for localStorage override first, then environment variable, then default
+const API_BASE_URL = localStorage.getItem('API_OVERRIDE') || 
+                     import.meta.env.VITE_API_BASE_URL || 
+                     'https://hireon-aiel.onrender.com';
 
 console.log('API Base URL:', API_BASE_URL); // Debug log
 
