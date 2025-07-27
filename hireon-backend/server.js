@@ -1607,22 +1607,25 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store reset token in database
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        resetToken: resetToken,
-        resetTokenExpiry: resetTokenExpiry.toISOString()
-      })
-      .eq('id', user.id);
+    // Store reset token in database (temporarily disabled until database columns are added)
+    // const { error: updateError } = await supabase
+    //   .from('users')
+    //   .update({
+    //     resetToken: resetToken,
+    //     resetTokenExpiry: resetTokenExpiry.toISOString()
+    //   })
+    //   .eq('id', user.id);
 
-    if (updateError) {
-      logger.error('Error storing reset token:', updateError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to process password reset request'
-      });
-    }
+    // if (updateError) {
+    //   logger.error('Error storing reset token:', updateError);
+    //   return res.status(500).json({
+    //     success: false,
+    //     error: 'Failed to process password reset request'
+    //   });
+    // }
+
+    // Temporary: Log the token instead of storing in database
+    logger.info(`Reset token generated for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
 
     // Send password reset email
     const emailSent = await sendPasswordResetEmail(email, resetToken);

@@ -146,6 +146,7 @@ const AuthPage = () => {
             </div>
 
             {/* Testimonials */}
+            
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-white mb-4">What Our Users Say</h3>
               {testimonials.map((testimonial, index) => (

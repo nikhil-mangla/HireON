@@ -91,6 +91,16 @@ export const authAPI = {
     const response = await api.get('/api/auth/trial-eligibility');
     return response.data;
   },
+
+  forgotPassword: async (emailData) => {
+    const response = await api.post('/api/auth/forgot-password', emailData);
+    return response.data;
+  },
+
+  resetPassword: async (resetData) => {
+    const response = await api.post('/api/auth/reset-password', resetData);
+    return response.data;
+  },
 };
 
 // Payment API functions

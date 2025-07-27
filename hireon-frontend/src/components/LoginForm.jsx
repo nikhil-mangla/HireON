@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const { login } = useAuth();
 
@@ -77,7 +79,16 @@ const LoginForm = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-white">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-white">Password</Label>
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+            >
+              Forgot password?
+            </button>
+          </div>
           <div className="relative">
             <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
@@ -115,6 +126,12 @@ const LoginForm = () => {
           )}
         </Button>
       </form>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal 
+        isOpen={showForgotPassword} 
+        onClose={() => setShowForgotPassword(false)} 
+      />
     </div>
   );
 };
