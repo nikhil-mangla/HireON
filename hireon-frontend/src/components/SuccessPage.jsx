@@ -54,34 +54,90 @@ const SuccessPage = ({ onBack }) => {
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(deepLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(deepLink);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        // Fallback for older browsers or when clipboard permission is denied
+        const textArea = document.createElement('textarea');
+        textArea.value = deepLink;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+          console.error('Fallback copy failed:', err);
+          // Show the link in an alert as last resort
+          alert(`Copy this link manually:\n\n${deepLink}`);
+        }
+        
+        document.body.removeChild(textArea);
+      }
     } catch (error) {
       console.error('Failed to copy:', error);
+      // Show the link in an alert as last resort
+      alert(`Copy this link manually:\n\n${deepLink}`);
     }
   };
 
   const showManualRegistrationInstructions = () => {
     const instructions = `
-To manually register the HireOn URL scheme on macOS:
+To open the HireOn app manually on macOS:
 
+METHOD 1 - Terminal Command:
+1. Open Terminal
+2. Run this command:
+   open -a "HireOn" "${deepLink}"
+
+METHOD 2 - Manual URL Scheme Registration:
 1. Open Terminal
 2. Run this command:
    defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=text/plain;LSHandlerRoleAll=com.hireon.app;}'
 
-3. Or try this alternative:
-   open -a "HireOn" "${deepLink}"
+METHOD 3 - Copy and Paste:
+1. Copy this deep link: ${deepLink}
+2. Paste it in your browser's address bar
+3. Press Enter
 
-4. If that doesn't work, you can:
-   • Copy the deep link and paste it in your browser
-   • Use the web version instead
-   • Download the official installer from the download page
+METHOD 4 - Web Version:
+Use the web version instead of the desktop app
 
-Deep Link: ${deepLink}
+METHOD 5 - Download Official Installer:
+Download the official installer from the download page to ensure proper URL scheme registration
+
+Note: If the app was installed manually (not through the official installer), the URL scheme may not be registered with macOS.
     `;
     
     alert(instructions);
+  };
+
+  const showTerminalCommand = () => {
+    const command = `open -a "HireOn" "${deepLink}"`;
+    const fullInstructions = `
+To open the HireOn app using Terminal:
+
+1. Open Terminal (Applications > Utilities > Terminal)
+2. Copy and paste this command:
+   ${command}
+3. Press Enter
+
+If that doesn't work, try:
+   open -a "HireOn.app" "${deepLink}"
+
+Or if the app is in a different location:
+   open -a "/Applications/HireOn.app" "${deepLink}"
+    `;
+    
+    alert(fullInstructions);
   };
 
   const openDeepLink = () => {
@@ -92,22 +148,23 @@ Deep Link: ${deepLink}
       
       // Set a timeout to try fallback schemes
       setTimeout(() => {
-        // Try the fallback deep link
-        console.log('Trying fallback deep link:', fallbackDeepLink);
-        window.location.href = fallbackDeepLink;
+        // Try the fallback deep link if it exists
+        if (fallbackDeepLink) {
+          console.log('Trying fallback deep link:', fallbackDeepLink);
+          window.location.href = fallbackDeepLink;
+        }
         
         // Set another timeout to show the web fallback
         setTimeout(() => {
-          // If both deep links failed, show the web fallback option
+          // If deep links failed, show the web fallback option
           const shouldShowWebFallback = confirm(
             'The HireOn desktop app didn\'t open automatically.\n\n' +
-            'This might be because:\n' +
-            '• The app was installed manually (not through official installer)\n' +
-            '• The app needs to be registered with the system\n\n' +
+            'This is likely because the app was installed manually and the URL scheme isn\'t registered.\n\n' +
             'Would you like to:\n' +
             '1. Copy the deep link to paste manually\n' +
             '2. Open the web version instead\n' +
-            '3. Download the official installer'
+            '3. Get help with manual registration\n' +
+            '4. Download the official installer'
           );
           
           if (shouldShowWebFallback) {
@@ -116,8 +173,9 @@ Deep Link: ${deepLink}
               'Choose an option:\n' +
               '1. Copy deep link\n' +
               '2. Open web version\n' +
-              '3. Download installer\n\n' +
-              'Enter 1, 2, or 3:'
+              '3. Get registration help\n' +
+              '4. Download installer\n\n' +
+              'Enter 1, 2, 3, or 4:'
             );
             
             switch (choice) {
@@ -125,9 +183,17 @@ Deep Link: ${deepLink}
                 copyToClipboard();
                 break;
               case '2':
-                window.open(webFallbackUrl, '_blank');
+                if (webFallbackUrl) {
+                  window.open(webFallbackUrl, '_blank');
+                } else {
+                  alert('Web fallback URL not available. Please copy the deep link manually.');
+                  copyToClipboard();
+                }
                 break;
               case '3':
+                showManualRegistrationInstructions();
+                break;
+              case '4':
                 window.open('/download', '_blank');
                 break;
               default:
@@ -362,7 +428,15 @@ Deep Link: ${deepLink}
                   </div>
 
                   {/* Manual Registration Help */}
-                  <div className="mt-6 text-center">
+                  <div className="mt-6 text-center space-y-3">
+                    <Button 
+                      onClick={showTerminalCommand}
+                      variant="outline"
+                      className="border-green-500/50 text-green-400 hover:bg-green-500/20 font-medium"
+                    >
+                      💻 Open via Terminal
+                    </Button>
+                    
                     <Button 
                       onClick={showManualRegistrationInstructions}
                       variant="outline"
