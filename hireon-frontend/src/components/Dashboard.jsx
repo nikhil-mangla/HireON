@@ -95,7 +95,7 @@ const Dashboard = () => {
       hasRefreshedRef.current = true;
       refreshUserData();
     }
-  }, [user]); // Only run when user changes and we haven't refreshed yet
+  }, [user, setAuthToken, updateUser]); // Include all dependencies
 
   // Real-time subscription status checking
   useEffect(() => {
@@ -162,7 +162,7 @@ const Dashboard = () => {
       clearTimeout(initialDelay);
       clearInterval(interval);
     };
-  }, [user?.plan, user?.verified]); // Only depend on plan and verified status, not expires
+  }, [user?.plan, user?.verified, logout, setAuthToken, updateUser, user]); // Include all dependencies
 
   // Calculate subscription expiry
   useEffect(() => {
@@ -357,7 +357,7 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Subscription Status Banner */}
         {subscriptionStatus === 'free' && (
-          <Card className="mb-8 border-2 border-dashed border-cyan-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm border-slate-600/50">
+          <Card className="mb-8 border-2 border-dashed border-cyan-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -392,7 +392,7 @@ const Dashboard = () => {
         )}
 
         {subscriptionStatus === 'expired' && (
-          <Card className="mb-8 border-2 border-red-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm border-slate-600/50">
+          <Card className="mb-8 border-2 border-red-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -427,7 +427,7 @@ const Dashboard = () => {
         )}
 
         {subscriptionStatus !== 'free' && subscriptionStatus !== 'expired' && (
-          <Card className="mb-8 border-2 border-green-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm border-slate-600/50">
+          <Card className="mb-8 border-2 border-green-400/30 bg-gradient-to-r from-slate-800/60 to-slate-700/60 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">

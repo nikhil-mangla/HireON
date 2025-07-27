@@ -83,7 +83,9 @@ const corsOptions = {
     ? [
         process.env.FRONTEND_URL, 
         'https://hire-on-nikhil-manglas-projects.vercel.app',
-        'https://hireon-rho.vercel.app' // Add new frontend domain
+        'https://hireon-rho.vercel.app',
+        /^https:\/\/hireon-.*-nikhil-manglas-projects\.vercel\.app$/, // Allow all Vercel preview deployments
+        /^https:\/\/hireon-.*\.vercel\.app$/ // Allow all Vercel domains for hireon
       ]
     : ['http://localhost:5173', 'http://localhost:5180'],
   credentials: true,
