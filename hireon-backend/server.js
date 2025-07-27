@@ -17,6 +17,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const { body, validationResult } = require('express-validator');
 const winston = require('winston');
+const nodemailer = require('nodemailer');
 
 // Configure logging
 const logger = winston.createLogger({
@@ -166,6 +167,70 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Email configuration
+const emailTransporter = nodemailer.createTransporter({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  }
+});
+
+// Function to send password reset email
+const sendPasswordResetEmail = async (email, resetToken) => {
+  const resetUrl = `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`;
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'HireOn - Password Reset Request',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">HireOn</h1>
+          <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Password Reset Request</p>
+        </div>
+        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: #333; margin-bottom: 20px;">Reset Your Password</h2>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+            You requested a password reset for your HireOn account. Click the button below to reset your password:
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+              Reset Password
+            </a>
+          </div>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+            If the button doesn't work, copy and paste this link into your browser:
+          </p>
+          <p style="color: #667eea; word-break: break-all; margin-bottom: 25px;">
+            <a href="${resetUrl}" style="color: #667eea;">${resetUrl}</a>
+          </p>
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px;">
+            <p style="color: #666; margin: 0; font-size: 14px;">
+              <strong>Important:</strong> This link will expire in 1 hour for security reasons. 
+              If you didn't request this password reset, please ignore this email.
+            </p>
+          </div>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #999; text-align: center; font-size: 12px; margin: 0;">
+            This email was sent from HireOn. If you have any questions, contact us at support@hireon.ex
+          </p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    await emailTransporter.sendMail(mailOptions);
+    logger.info(`Password reset email sent to: ${email}`);
+    return true;
+  } catch (error) {
+    logger.error('Error sending password reset email:', error);
+    return false;
+  }
+};
 
 // Token blacklist for expired subscriptions
 const tokenBlacklist = new Set();
@@ -861,7 +926,9 @@ app.get('/', (req, res) => {
         google: 'POST /api/auth/google',
         validateToken: 'POST /api/auth/validate-token',
         checkSubscription: 'POST /api/auth/check-subscription',
-        trialEligibility: 'GET /api/auth/trial-eligibility'
+        trialEligibility: 'GET /api/auth/trial-eligibility',
+        forgotPassword: 'POST /api/auth/forgot-password',
+        resetPassword: 'POST /api/auth/reset-password'
       },
       user: {
         profile: 'GET /api/user/profile',
@@ -1495,6 +1562,205 @@ app.get('/api/auth/trial-eligibility', checkTokenBlacklist, authenticateToken, a
       error: 'Internal server error'
     });
   }
+});
+
+// Forgot password endpoint
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required'
+      });
+    }
+
+    // Check if user exists
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, name')
+      .eq('email', email)
+      .single();
+
+    if (error || !user) {
+      // Don't reveal if user exists or not for security
+      logger.info(`Password reset requested for non-existent email: ${email}`);
+      return res.json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Store reset token in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        resetToken: resetToken,
+        resetTokenExpiry: resetTokenExpiry.toISOString()
+      })
+      .eq('id', user.id);
+
+    if (updateError) {
+      logger.error('Error storing reset token:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to process password reset request'
+      });
+    }
+
+    // Send password reset email
+    const emailSent = await sendPasswordResetEmail(email, resetToken);
+    
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to send password reset email'
+      });
+    }
+
+    logger.info(`Password reset email sent to: ${email}`);
+    
+    res.json({
+      success: true,
+      message: 'Password reset email sent successfully'
+    });
+  } catch (error) {
+    logger.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Reset password endpoint
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Token and new password are required'
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 8 characters long'
+      });
+    }
+
+    // Find user with this reset token
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, resetToken, resetTokenExpiry')
+      .eq('resetToken', token)
+      .single();
+
+    if (error || !user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired reset token'
+      });
+    }
+
+    // Check if token is expired
+    if (new Date() > new Date(user.resetTokenExpiry)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Reset token has expired'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password and clear reset token
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', user.id);
+
+    if (updateError) {
+      logger.error('Error updating password:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to reset password'
+      });
+    }
+
+    // Blacklist all existing tokens for this user
+    blacklistUserTokens(user.id);
+
+    logger.info(`Password reset successful for user: ${user.email}`);
+    
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error) {
+    logger.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// GET route for forgot password endpoint information
+app.get('/api/auth/forgot-password', (req, res) => {
+  res.json({
+    success: false,
+    error: 'Method not allowed',
+    message: 'This endpoint only accepts POST requests',
+    requiredFields: {
+      email: 'string (valid email format)'
+    },
+    example: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        email: 'user@example.com'
+      }
+    }
+  });
+});
+
+// GET route for reset password endpoint information
+app.get('/api/auth/reset-password', (req, res) => {
+  res.json({
+    success: false,
+    error: 'Method not allowed',
+    message: 'This endpoint only accepts POST requests',
+    requiredFields: {
+      token: 'string (reset token from email)',
+      newPassword: 'string (minimum 8 characters)'
+    },
+    example: {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: {
+        token: 'reset_token_from_email',
+        newPassword: 'new_password_123'
+      }
+    }
+  });
 });
 
 // Get subscription status endpoint
