@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Updated to use production backend URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hireon-aiel.onrender.com';
 
 // Create axios instance
