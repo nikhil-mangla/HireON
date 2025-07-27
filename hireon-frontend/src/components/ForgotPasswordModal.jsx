@@ -28,7 +28,20 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      setError('An unexpected error occurred. Please try again.');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      
+      if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else if (error.message) {
+        setError(`Network error: ${error.message}`);
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
