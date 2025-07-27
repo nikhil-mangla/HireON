@@ -1836,8 +1836,10 @@ app.post('/api/generate-deep-link', authenticateToken, async (req, res) => {
       { expiresIn: '1h' } // Deep link token expires in 1 hour
     );
 
-    // Generate the deep link URL
+    // Generate multiple deep link URLs for different scenarios
     const deepLinkUrl = `hireon://auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
+    const fallbackDeepLink = `learncodeapp://auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
+    const webFallbackUrl = `${process.env.FRONTEND_URL || 'https://hire-on-nikhil-manglas-projects.vercel.app'}/auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
     
     // Also generate a fallback URL for manual copy
     const fallbackData = {
@@ -1852,6 +1854,8 @@ app.post('/api/generate-deep-link', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       deepLink: deepLinkUrl,
+      fallbackDeepLink: fallbackDeepLink,
+      webFallbackUrl: webFallbackUrl,
       token: electronToken,
       fallbackData,
       message: 'Deep link generated successfully'

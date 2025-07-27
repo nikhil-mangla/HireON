@@ -20,6 +20,8 @@ import { api } from '../lib/api.js';
 const SuccessPage = ({ onBack }) => {
   const { user } = useAuth();
   const [deepLink, setDeepLink] = useState('');
+  const [fallbackDeepLink, setFallbackDeepLink] = useState('');
+  const [webFallbackUrl, setWebFallbackUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
@@ -37,6 +39,8 @@ const SuccessPage = ({ onBack }) => {
       const response = await api.post('/api/generate-deep-link');
       if (response.data.success) {
         setDeepLink(response.data.deepLink);
+        setFallbackDeepLink(response.data.fallbackDeepLink);
+        setWebFallbackUrl(response.data.webFallbackUrl);
       } else {
         setError('Failed to generate deep link');
       }
@@ -58,16 +62,79 @@ const SuccessPage = ({ onBack }) => {
     }
   };
 
+  const showManualRegistrationInstructions = () => {
+    const instructions = `
+To manually register the HireOn URL scheme on macOS:
+
+1. Open Terminal
+2. Run this command:
+   defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=text/plain;LSHandlerRoleAll=com.hireon.app;}'
+
+3. Or try this alternative:
+   open -a "HireOn" "${deepLink}"
+
+4. If that doesn't work, you can:
+   • Copy the deep link and paste it in your browser
+   • Use the web version instead
+   • Download the official installer from the download page
+
+Deep Link: ${deepLink}
+    `;
+    
+    alert(instructions);
+  };
+
   const openDeepLink = () => {
     try {
-      // Try to open the deep link
+      // Try the primary deep link first
+      console.log('Attempting to open deep link:', deepLink);
       window.location.href = deepLink;
       
-      // Set a timeout to check if the app opened
+      // Set a timeout to try fallback schemes
       setTimeout(() => {
-        // If we're still on the same page after 2 seconds, the app probably didn't open
-        // Show a message to the user
-        alert('If the HireOn desktop app didn\'t open automatically, please:\n\n1. Make sure you have the HireOn desktop app installed\n2. Copy the link below and paste it in your browser\n3. Or download the app from the download page');
+        // Try the fallback deep link
+        console.log('Trying fallback deep link:', fallbackDeepLink);
+        window.location.href = fallbackDeepLink;
+        
+        // Set another timeout to show the web fallback
+        setTimeout(() => {
+          // If both deep links failed, show the web fallback option
+          const shouldShowWebFallback = confirm(
+            'The HireOn desktop app didn\'t open automatically.\n\n' +
+            'This might be because:\n' +
+            '• The app was installed manually (not through official installer)\n' +
+            '• The app needs to be registered with the system\n\n' +
+            'Would you like to:\n' +
+            '1. Copy the deep link to paste manually\n' +
+            '2. Open the web version instead\n' +
+            '3. Download the official installer'
+          );
+          
+          if (shouldShowWebFallback) {
+            // Show options to the user
+            const choice = prompt(
+              'Choose an option:\n' +
+              '1. Copy deep link\n' +
+              '2. Open web version\n' +
+              '3. Download installer\n\n' +
+              'Enter 1, 2, or 3:'
+            );
+            
+            switch (choice) {
+              case '1':
+                copyToClipboard();
+                break;
+              case '2':
+                window.open(webFallbackUrl, '_blank');
+                break;
+              case '3':
+                window.open('/download', '_blank');
+                break;
+              default:
+                copyToClipboard();
+            }
+          }
+        }, 2000);
       }, 2000);
     } catch (error) {
       console.error('Failed to open deep link:', error);
@@ -291,6 +358,17 @@ const SuccessPage = ({ onBack }) => {
                     >
                       <Download className="h-5 w-5 mr-2" />
                       💾 Download Token
+                    </Button>
+                  </div>
+
+                  {/* Manual Registration Help */}
+                  <div className="mt-6 text-center">
+                    <Button 
+                      onClick={showManualRegistrationInstructions}
+                      variant="outline"
+                      className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 font-medium"
+                    >
+                      🔧 App Not Opening? Get Help
                     </Button>
                   </div>
                 </>
