@@ -1,11 +1,13 @@
 import axios from 'axios';
 
 // Check for localStorage override first, then environment variable, then default
+// Updated for production deployment - force rebuild
 const API_BASE_URL = localStorage.getItem('API_OVERRIDE') || 
                      import.meta.env.VITE_API_BASE_URL || 
                      'https://hireon-aiel.onrender.com';
 
 console.log('API Base URL:', API_BASE_URL); // Debug log
+console.log('Environment VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL); // Debug environment variable
 
 // Create axios instance
 const api = axios.create({
