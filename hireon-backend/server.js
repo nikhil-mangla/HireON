@@ -17,7 +17,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const { body, validationResult } = require('express-validator');
 const winston = require('winston');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 // Configure logging
 const logger = winston.createLogger({
@@ -169,73 +169,79 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Email configuration
-let emailTransporter = null;
+let resend = null;
 
-if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-  emailTransporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+  logger.info('Resend email service configured successfully');
 } else {
-  logger.warn('Email credentials not configured. Password reset emails will not be sent.');
+  logger.warn('Resend API key not configured. Password reset emails will not be sent.');
 }
 
 // Function to send password reset email
 const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetUrl = `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`;
+  const frontendUrl = process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app';
+  const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
   
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'HireOn - Password Reset Request',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">HireOn</h1>
-          <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Password Reset Request</p>
-        </div>
-        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <h2 style="color: #333; margin-bottom: 20px;">Reset Your Password</h2>
-          <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
-            You requested a password reset for your HireOn account. Click the button below to reset your password:
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-              Reset Password
-            </a>
-          </div>
-          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
-            If the button doesn't work, copy and paste this link into your browser:
-          </p>
-          <p style="color: #667eea; word-break: break-all; margin-bottom: 25px;">
-            <a href="${resetUrl}" style="color: #667eea;">${resetUrl}</a>
-          </p>
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px;">
-            <p style="color: #666; margin: 0; font-size: 14px;">
-              <strong>Important:</strong> This link will expire in 1 hour for security reasons. 
-              If you didn't request this password reset, please ignore this email.
-            </p>
-          </div>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-          <p style="color: #999; text-align: center; font-size: 12px; margin: 0;">
-            This email was sent from HireOn. If you have any questions, contact us at support@hireon.ex
-          </p>
-        </div>
+  logger.info(`Reset URL generated: ${resetUrl}`);
+  
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">HireOn</h1>
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Password Reset Request</p>
       </div>
-    `
-  };
+      <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <h2 style="color: #333; margin-bottom: 20px;">Reset Your Password</h2>
+        <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+          You requested a password reset for your HireOn account. Click the button below to reset your password:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+            Reset Password
+          </a>
+        </div>
+        <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+          If the button doesn't work, copy and paste this link into your browser:
+        </p>
+        <p style="color: #667eea; word-break: break-all; margin-bottom: 25px;">
+          <a href="${resetUrl}" style="color: #667eea;">${resetUrl}</a>
+        </p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px;">
+          <p style="color: #666; margin: 0; font-size: 14px;">
+            <strong>Important:</strong> This link will expire in 1 hour for security reasons. 
+            If you didn't request this password reset, please ignore this email.
+          </p>
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+        <p style="color: #999; text-align: center; font-size: 12px; margin: 0;">
+          This email was sent from HireOn. If you have any questions, contact us at support@hireon.ex
+        </p>
+      </div>
+    </div>
+  `;
 
   try {
-    if (!emailTransporter) {
-      logger.warn(`Email not configured. Would send password reset email to: ${email} with token: ${resetToken}`);
-      return true; // Return true to simulate success
+    if (!resend) {
+      logger.warn(`Resend not configured. Would send password reset email to: ${email} with token: ${resetToken}`);
+      return false; // Return false to indicate email not sent
     }
     
-    await emailTransporter.sendMail(mailOptions);
-    logger.info(`Password reset email sent to: ${email}`);
+    logger.info(`Attempting to send password reset email to: ${email}`);
+    
+    const { data, error } = await resend.emails.send({
+      from: 'HireOn <onboarding@resend.dev>',
+      to: [email],
+      subject: 'HireOn - Password Reset Request',
+      html: emailHtml
+    });
+
+    if (error) {
+      logger.error('Resend API error:', error);
+      return false;
+    }
+
+    logger.info(`Password reset email sent to: ${email}. Email ID: ${data?.id}`);
     return true;
   } catch (error) {
     logger.error('Error sending password reset email:', error);
@@ -1607,25 +1613,24 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store reset token in database (temporarily disabled until database columns are added)
-    // const { error: updateError } = await supabase
-    //   .from('users')
-    //   .update({
-    //     resetToken: resetToken,
-    //     resetTokenExpiry: resetTokenExpiry.toISOString()
-    //   })
-    //   .eq('id', user.id);
+    // Store reset token in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        resettoken: resetToken,
+        resettokenexpiry: resetTokenExpiry.toISOString()
+      })
+      .eq('id', user.id);
 
-    // if (updateError) {
-    //   logger.error('Error storing reset token:', updateError);
-    //   return res.status(500).json({
-    //     success: false,
-    //     error: 'Failed to process password reset request'
-    //   });
-    // }
+    if (updateError) {
+      logger.error('Error storing reset token:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to process password reset request'
+      });
+    }
 
-    // Temporary: Log the token instead of storing in database
-    logger.info(`Reset token generated for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
+    logger.info(`Reset token stored in database for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
 
     // Send password reset email
     const emailSent = await sendPasswordResetEmail(email, resetToken);
@@ -1636,6 +1641,17 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         error: 'Failed to send password reset email'
       });
     }
+
+    // Check if email system is configured
+    if (!resend) {
+      logger.info(`Password reset requested for ${email} but email system not configured`);
+      return res.status(503).json({
+        success: false,
+        error: 'Password reset email system is not configured. Please contact support.'
+      });
+    }
+
+    logger.info(`Processing password reset request for: ${email}`);
 
     logger.info(`Password reset email sent to: ${email}`);
     
@@ -1674,8 +1690,8 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
     // Find user with this reset token
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, email, resetToken, resetTokenExpiry')
-      .eq('resetToken', token)
+      .select('id, email, resettoken, resettokenexpiry')
+      .eq('resettoken', token)
       .single();
 
     if (error || !user) {
@@ -1686,7 +1702,7 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
     }
 
     // Check if token is expired
-    if (new Date() > new Date(user.resetTokenExpiry)) {
+    if (new Date() > new Date(user.resettokenexpiry)) {
       return res.status(400).json({
         success: false,
         error: 'Reset token has expired'
@@ -1701,8 +1717,8 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
       .from('users')
       .update({
         password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
+        resettoken: null,
+        resettokenexpiry: null,
         updatedAt: new Date().toISOString()
       })
       .eq('id', user.id);
