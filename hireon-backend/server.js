@@ -862,11 +862,16 @@ app.get('/', (req, res) => {
         verifyPayment: 'POST /api/razorpay/verify-payment',
         webhook: 'POST /api/razorpay/webhook'
       },
+      download: {
+        windows: 'GET /api/download/windows',
+        mac: 'GET /api/download/mac',
+        urls: 'GET /api/download-urls'
+      },
       system: {
         health: 'GET /api/health'
       }
     },
-    documentation: 'All endpoints return JSON responses. Authentication endpoints require POST requests with appropriate data.'
+    documentation: 'All endpoints return JSON responses. Authentication endpoints require POST requests with appropriate data. Download endpoints redirect to GitHub releases.'
   });
 });
 
