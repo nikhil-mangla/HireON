@@ -262,30 +262,53 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
           setLoading(false);
         });
 
-        // Focus management when modal opens
+        // Enhanced focus management when modal opens
         razorpay.on('modal.opened', function () {
-          console.log('Razorpay modal opened - attempting to focus');
-          setTimeout(() => {
-            const focusRazorpayPopup = () => {
-              try {
-                const razorpayIframe = document.querySelector('iframe[src*="razorpay"]');
-                if (razorpayIframe) {
-                  razorpayIframe.focus();
-                  console.log('✅ Razorpay iframe focused via modal.opened event');
-                  return true;
+          console.log('Razorpay modal opened - attempting to activate iframe');
+          
+          const activateRazorpayIframe = () => {
+            try {
+              const razorpayIframe = document.querySelector('iframe[src*="razorpay"]');
+              if (razorpayIframe) {
+                // Method 1: Focus the iframe
+                razorpayIframe.focus();
+                
+                // Method 2: Click on the iframe to activate it
+                razorpayIframe.click();
+                
+                // Method 3: Dispatch focus event
+                razorpayIframe.dispatchEvent(new Event('focus', { bubbles: true }));
+                
+                // Method 4: Try to access iframe content (if same-origin)
+                try {
+                  if (razorpayIframe.contentWindow && razorpayIframe.contentWindow.document) {
+                    const iframeDoc = razorpayIframe.contentWindow.document;
+                    const firstInput = iframeDoc.querySelector('input');
+                    if (firstInput) {
+                      firstInput.focus();
+                      console.log('✅ Focused first input inside Razorpay iframe');
+                    }
+                  }
+                } catch (iframeError) {
+                  // Cross-origin restriction - this is expected
+                  console.log('Cross-origin iframe - using external focus methods:', iframeError.message);
                 }
-                return false;
-              } catch (error) {
-                console.log('❌ Focus error in modal.opened:', error);
-                return false;
+                
+                console.log('✅ Razorpay iframe activated via multiple methods');
+                return true;
               }
-            };
-            
-            // Try multiple times with different delays
-            focusRazorpayPopup();
-            setTimeout(focusRazorpayPopup, 200);
-            setTimeout(focusRazorpayPopup, 500);
-          }, 100);
+              return false;
+            } catch (error) {
+              console.log('❌ Iframe activation error:', error);
+              return false;
+            }
+          };
+          
+          // Try activation multiple times with different delays
+          setTimeout(activateRazorpayIframe, 100);
+          setTimeout(activateRazorpayIframe, 300);
+          setTimeout(activateRazorpayIframe, 600);
+          setTimeout(activateRazorpayIframe, 1000);
         });
 
         // Handle modal close
@@ -297,7 +320,7 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
         // Open the payment modal
         razorpay.open();
         
-        // Show a brief notification to guide user focus
+        // Show a brief notification to guide user focus and interaction
         const showFocusNotification = () => {
           const notification = document.createElement('div');
           notification.innerHTML = `
@@ -307,16 +330,22 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
               right: 20px;
               background: #10b981;
               color: white;
-              padding: 12px 16px;
+              padding: 16px 20px;
               border-radius: 8px;
               font-size: 14px;
               z-index: 10000;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               animation: slideIn 0.3s ease-out;
+              max-width: 350px;
             ">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span>💳</span>
-                <span>Payment window opened - please complete your payment</span>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span>💳</span>
+                  <span style="font-weight: 600;">Payment window opened</span>
+                </div>
+                <div style="font-size: 13px; opacity: 0.9;">
+                  Click inside the payment window to start filling your details
+                </div>
               </div>
             </div>
             <style>
@@ -328,25 +357,61 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
           `;
           document.body.appendChild(notification);
           
-          // Remove notification after 3 seconds
+          // Remove notification after 5 seconds
           setTimeout(() => {
             if (notification.parentNode) {
               notification.parentNode.removeChild(notification);
             }
-          }, 3000);
+          }, 5000);
         };
         
         // Show notification after a short delay
         setTimeout(showFocusNotification, 500);
         
-        // Enhanced focus management: Wait for Razorpay iframe to load and focus it
-        const focusRazorpayPopup = () => {
+        // Enhanced iframe activation: Wait for Razorpay iframe to load and activate it
+        const activateRazorpayIframe = () => {
           try {
             // Method 1: Find Razorpay iframe by src
             const razorpayIframe = document.querySelector('iframe[src*="razorpay"]');
             if (razorpayIframe) {
+              // Multiple activation methods
               razorpayIframe.focus();
-              console.log('✅ Razorpay iframe focused by src');
+              razorpayIframe.click();
+              
+              // Simulate user interaction to activate the iframe
+              const rect = razorpayIframe.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+              
+              // Create and dispatch click events at the center of the iframe
+              const clickEvent = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: centerX,
+                clientY: centerY
+              });
+              razorpayIframe.dispatchEvent(clickEvent);
+              
+              // Also dispatch mousedown and mouseup events
+              const mouseDownEvent = new MouseEvent('mousedown', {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: centerX,
+                clientY: centerY
+              });
+              const mouseUpEvent = new MouseEvent('mouseup', {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: centerX,
+                clientY: centerY
+              });
+              razorpayIframe.dispatchEvent(mouseDownEvent);
+              razorpayIframe.dispatchEvent(mouseUpEvent);
+              
+              console.log('✅ Razorpay iframe activated with multiple interaction methods');
               return true;
             }
             
@@ -356,7 +421,8 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
               const containerIframe = razorpayContainer.querySelector('iframe');
               if (containerIframe) {
                 containerIframe.focus();
-                console.log('✅ Razorpay iframe focused via container');
+                containerIframe.click();
+                console.log('✅ Razorpay iframe activated via container');
                 return true;
               }
             }
@@ -367,12 +433,13 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
               const zIndex = parseInt(window.getComputedStyle(iframe).zIndex);
               if (zIndex > 1000) {
                 iframe.focus();
-                console.log('✅ High z-index iframe focused (likely Razorpay)');
+                iframe.click();
+                console.log('✅ High z-index iframe activated (likely Razorpay)');
                 return true;
               }
             }
             
-            // Method 4: Focus any visible iframe that appeared recently
+            // Method 4: Activate any visible iframe that appeared recently
             const visibleIframes = Array.from(iframes).filter(iframe => {
               const rect = iframe.getBoundingClientRect();
               return rect.width > 0 && rect.height > 0 && 
@@ -380,24 +447,26 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
             });
             
             if (visibleIframes.length > 0) {
-              visibleIframes[0].focus();
-              console.log('✅ Visible iframe focused as fallback');
+              const iframe = visibleIframes[0];
+              iframe.focus();
+              iframe.click();
+              console.log('✅ Visible iframe activated as fallback');
               return true;
             }
             
-            console.log('⚠️ No Razorpay iframe found to focus');
+            console.log('⚠️ No Razorpay iframe found to activate');
             return false;
           } catch (error) {
-            console.log('❌ Focus management error:', error);
+            console.log('❌ Iframe activation error:', error);
             return false;
           }
         };
 
-        // Try to focus immediately and then retry with delays
-        setTimeout(focusRazorpayPopup, 100);  // Quick attempt
-        setTimeout(focusRazorpayPopup, 500);  // Main attempt
-        setTimeout(focusRazorpayPopup, 1000); // Fallback attempt
-        setTimeout(focusRazorpayPopup, 2000); // Final attempt
+        // Try to activate immediately and then retry with delays
+        setTimeout(activateRazorpayIframe, 100);  // Quick attempt
+        setTimeout(activateRazorpayIframe, 500);  // Main attempt
+        setTimeout(activateRazorpayIframe, 1000); // Fallback attempt
+        setTimeout(activateRazorpayIframe, 2000); // Final attempt
         
         // ====== END RAZORPAY PAYMENT LOGIC =====
     } catch (error) {
