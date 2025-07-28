@@ -2027,14 +2027,28 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
     if (!token || !newPassword) {
       return res.status(400).json({
         success: false,
-        error: 'Token and new password are required'
+        error: 'Missing required information',
+        message: 'Reset token and new password are required.',
+        instructions: 'Please provide both the reset token from your email and your new password.',
+        suggestions: [
+          'Check your email for the reset link',
+          'Make sure you copied the complete reset token',
+          'Enter a new password that is at least 8 characters long'
+        ]
       });
     }
 
     if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        error: 'Password must be at least 8 characters long'
+        error: 'Password too short',
+        message: 'Your new password must be at least 8 characters long.',
+        instructions: 'Please choose a stronger password for better security.',
+        suggestions: [
+          'Use at least 8 characters',
+          'Include a mix of letters, numbers, and symbols',
+          'Avoid common passwords like "password123"'
+        ]
       });
     }
 
@@ -2081,7 +2095,14 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
         if (error || !dbUser) {
           return res.status(400).json({
             success: false,
-            error: 'Invalid or expired reset token'
+            error: 'Invalid reset token',
+            message: 'The reset token is invalid or has already been used.',
+            instructions: 'Please request a new password reset link.',
+            suggestions: [
+              'Click "Forgot Password" again to get a new reset link',
+              'Make sure you\'re using the most recent reset link from your email',
+              'Check that you copied the complete token from the email'
+            ]
           });
         }
 
@@ -2089,7 +2110,14 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
         if (new Date() > new Date(dbUser.resettokenexpiry)) {
           return res.status(400).json({
             success: false,
-            error: 'Reset token has expired'
+            error: 'Reset token expired',
+            message: 'The password reset link has expired.',
+            instructions: 'Password reset links expire after 1 hour for security reasons.',
+            suggestions: [
+              'Request a new password reset link',
+              'Click "Forgot Password" to get a fresh reset link',
+              'Check your email for the most recent reset link'
+            ]
           });
         }
         
@@ -2147,9 +2175,6 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
       logger.warn(`Password reset completed but database update failed for user: ${user.email}`);
       // Still return success since the token was cleared and password was processed
     }
-
-    // Blacklist all existing tokens for this user
-    blacklistUserTokens(user.id);
 
     logger.info(`Password reset successful for user: ${user.email}`);
     
