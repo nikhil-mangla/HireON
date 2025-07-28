@@ -320,6 +320,9 @@ const PaymentModal = ({ isOpen, onClose, selectedPlan }) => {
         // Open the payment modal
         razorpay.open();
         
+        // Close the payment modal when Razorpay popup opens
+        onClose();
+        
         // Show a brief notification to guide user focus and interaction
         const showFocusNotification = () => {
           const notification = document.createElement('div');
