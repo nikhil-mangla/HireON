@@ -1918,9 +1918,17 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         // Check if email service is configured
         if (!resend) {
           logger.warn(`Email service not configured. Token generated but email not sent to: ${email}`);
-          return res.status(503).json({
-            success: false,
-            error: 'Password reset email service is not configured. Please contact support.'
+          
+          // For development/testing, return the reset token even in production
+          logger.info(`DEVELOPMENT MODE: Password reset token for ${email}: ${resetToken}`);
+          logger.info(`DEVELOPMENT MODE: Reset URL: ${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`);
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Password reset token generated (email service not configured)',
+            resetToken: resetToken,
+            resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`,
+            note: 'Email service not configured. Use the reset URL above to test the password reset flow.'
           });
         }
         
@@ -1950,9 +1958,17 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
       // Check if email service is configured
       if (!resend) {
         logger.warn(`Email service not configured. Token generated but email not sent to: ${email}`);
-        return res.status(503).json({
-          success: false,
-          error: 'Password reset email service is not configured. Please contact support.'
+        
+        // For development/testing, return the reset token even in production
+        logger.info(`DEVELOPMENT MODE: Password reset token for ${email}: ${resetToken}`);
+        logger.info(`DEVELOPMENT MODE: Reset URL: ${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`);
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Password reset token generated (email service not configured)',
+          resetToken: resetToken,
+          resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`,
+          note: 'Email service not configured. Use the reset URL above to test the password reset flow.'
         });
       }
       

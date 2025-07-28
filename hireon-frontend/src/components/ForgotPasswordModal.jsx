@@ -12,6 +12,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [canResend, setCanResend] = useState(false);
   const [timer, setTimer] = useState(0);
+  const [resetUrl, setResetUrl] = useState('');
 
   // Timer effect for cooldown
   useEffect(() => {
@@ -44,6 +45,11 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
       if (response.success) {
         setSuccess(true);
         startTimer(); // Start cooldown timer
+        
+        // Store reset URL if provided (for development/testing)
+        if (response.resetUrl) {
+          setResetUrl(response.resetUrl);
+        }
       } else {
         setError(response.error || 'Failed to send reset email');
       }
@@ -102,6 +108,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
     setError('');
     setCanResend(false);
     setTimer(0);
+    setResetUrl('');
     onClose();
   };
 
@@ -219,6 +226,21 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                       <li>• Create a new password</li>
                       <li>• Sign in with your new password</li>
                     </ul>
+                    {resetUrl && (
+                      <div className="mt-3 pt-3 border-t border-cyan-500/20">
+                        <p className="text-xs text-cyan-300 mb-2">
+                          <strong>Development Mode:</strong> Email service not configured. Use this link to test:
+                        </p>
+                        <a 
+                          href={resetUrl}
+                          className="text-xs text-cyan-400 hover:text-cyan-300 break-all"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {resetUrl}
+                        </a>
+                      </div>
+                    )}
                     {!canResend && timer > 0 && (
                       <div className="mt-3 pt-3 border-t border-cyan-500/20">
                         <p className="text-xs text-cyan-300">
