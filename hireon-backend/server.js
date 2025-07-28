@@ -271,8 +271,6 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     
     // Use Resend's verified domain directly
     try {
-      logger.info(`Attempting to send password reset email to: ${email}`);
-      
       const { data, error } = await resend.emails.send({
         from: 'onboarding@resend.dev', // Use Resend's verified domain directly
         to: [email],
@@ -305,8 +303,6 @@ const sendPasswordResetEmail = async (email, resetToken) => {
         resetUrl
       };
     }
-
-    return { success: true };
 
   } catch (error) {
     logger.error('Error sending password reset email:', error);
