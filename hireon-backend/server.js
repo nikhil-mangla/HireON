@@ -1029,8 +1029,9 @@ app.get('/api/download/:platform', (req, res) => {
   if (direct === 'true') {
     const fs = require('fs');
     const path = require('path');
+    const https = require('https');
     
-    // Check if local file exists
+    // Check if local file exists first
     if (fs.existsSync(config.localPath)) {
       // Serve file directly with proper headers
       res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
@@ -1043,18 +1044,43 @@ app.get('/api/download/:platform', (req, res) => {
       logger.info(`Direct download served for ${platform}: ${config.filename}`);
       return;
     } else {
-      // Local file doesn't exist, provide helpful error message
-      logger.info(`Local file not found for ${platform}, providing download instructions`);
-      res.status(404).json({
-        success: false,
-        error: 'File not available for direct download',
-        message: 'The desktop app file is not yet available for direct download.',
-        instructions: [
-          '1. The file needs to be uploaded to the server',
-          '2. Or create a GitHub release with the file',
-          '3. For now, please use the web version at https://hireon-rho.vercel.app'
-        ],
-        note: 'Contact us for early access to the desktop app.'
+      // Local file doesn't exist, try to stream from GitHub
+      logger.info(`Local file not found, attempting to stream from GitHub for ${platform}`);
+      
+      // Set proper headers for download
+      res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
+      res.setHeader('Content-Type', config.contentType);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Stream the file from GitHub
+      https.get(config.githubUrl, (fileRes) => {
+        if (fileRes.statusCode === 200) {
+          // Successfully streaming from GitHub
+          fileRes.pipe(res);
+          logger.info(`Streaming download from GitHub for ${platform}: ${config.filename}`);
+        } else {
+          // GitHub file not found, provide helpful error
+          logger.error(`GitHub file not found for ${platform}: ${fileRes.statusCode}`);
+          res.status(404).json({
+            success: false,
+            error: 'File not available for download',
+            message: 'The desktop app file is not yet available for download.',
+            instructions: [
+              '1. Create a GitHub release with the file',
+              '2. Or upload the file to the server',
+              '3. For now, please use the web version at https://hireon-rho.vercel.app'
+            ],
+            note: 'Contact us for early access to the desktop app.'
+          });
+        }
+      }).on('error', (err) => {
+        logger.error(`Error streaming from GitHub for ${platform}:`, err);
+        res.status(500).json({
+          success: false,
+          error: 'Download failed',
+          message: 'Failed to download the file. Please try again later.',
+          note: 'Contact us for early access to the desktop app.'
+        });
       });
       return;
     }

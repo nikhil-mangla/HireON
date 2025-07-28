@@ -59,28 +59,6 @@ const DownloadPage = () => {
       // Update UI state
       setDownloadStarted(prev => ({ ...prev, [platform]: true }));
 
-      // First, check if the file is available by making a HEAD request
-      try {
-        const response = await fetch(downloadUrl, { method: 'HEAD' });
-        
-        if (!response.ok) {
-          // File not available, show helpful message
-          const errorData = await response.json().catch(() => ({}));
-          const message = errorData.message || 'The desktop app is not yet available for download.';
-          const instructions = errorData.instructions || [
-            '• Use the web version at https://hireon-rho.vercel.app',
-            '• Contact us for early access',
-            '• Check back soon for the official release!'
-          ];
-          
-          alert(`${message}\n\n${instructions.join('\n')}`);
-          setDownloadStarted(prev => ({ ...prev, [platform]: false }));
-          return;
-        }
-      } catch {
-        console.log('HEAD request failed, proceeding with download attempt');
-      }
-
       // Create a temporary anchor element for direct download
       const link = document.createElement('a');
       link.href = downloadUrl;
