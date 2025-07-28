@@ -1142,10 +1142,10 @@ app.get('/api/download/:platform', async (req, res) => {
   // Log download attempt
   logger.info(`Download requested for platform: ${platform}, direct: ${direct}`);
 
-  // If direct download is requested, try to serve the file directly
+    // If direct download is requested, try to serve the file directly
   if (direct === 'true') {
     try {
-      // First, try to get signed URL from S3
+      // Always try S3 first - skip local files for now
       const signedUrl = await generateSignedUrl(config.s3Key, config.filename, config.contentType);
       
       if (signedUrl) {
@@ -1153,64 +1153,29 @@ app.get('/api/download/:platform', async (req, res) => {
         logger.info(`Redirecting to S3 signed URL for ${platform}: ${config.filename}`);
         res.redirect(signedUrl);
         return;
-      }
-    } catch (s3Error) {
-      logger.warn(`S3 signed URL generation failed for ${platform}:`, s3Error.message);
-    }
-
-    // Fallback: Check if local file exists
-    if (fs.existsSync(config.localPath)) {
-      // Serve file directly with proper headers and 200 status
-      res.status(200);
-      res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
-      res.setHeader('Content-Type', config.contentType);
-      res.setHeader('Cache-Control', 'no-cache');
-      
-      const fileStream = fs.createReadStream(config.localPath);
-      fileStream.pipe(res);
-      
-      logger.info(`Direct download served locally for ${platform}: ${config.filename}`);
-      return;
-    } else {
-      // Local file doesn't exist, try to stream from GitHub
-      logger.info(`Local file not found, attempting to stream from GitHub for ${platform}`);
-      
-      // Set proper headers for download
-      res.status(200);
-      res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
-      res.setHeader('Content-Type', config.contentType);
-      res.setHeader('Cache-Control', 'no-cache');
-      
-      // Stream the file from GitHub
-      const https = require('https');
-      https.get(config.githubUrl, (fileRes) => {
-        if (fileRes.statusCode === 200) {
-          // Successfully streaming from GitHub
-          fileRes.pipe(res);
-          logger.info(`Streaming download from GitHub for ${platform}: ${config.filename}`);
-        } else {
-          // GitHub file not found, provide helpful error
-          logger.error(`GitHub file not found for ${platform}: ${fileRes.statusCode}`);
-          res.status(404).json({
-            success: false,
-            error: 'File not available for download',
-            message: 'The desktop app file is not yet available for download.',
-            instructions: [
-              '1. Upload the file to S3 bucket',
-              '2. Create a GitHub release with the file',
-              '3. For now, please use the web version at https://hireon-rho.vercel.app'
-            ],
-            note: 'Contact us for early access to the desktop app.'
-          });
-        }
-      }).on('error', (err) => {
-        logger.error(`Error streaming from GitHub for ${platform}:`, err);
-        res.status(500).json({
+      } else {
+        // S3 failed, return error
+        logger.error(`S3 signed URL generation failed for ${platform}`);
+        res.status(404).json({
           success: false,
-          error: 'Download failed',
-          message: 'Failed to download the file. Please try again later.',
+          error: 'File not available for download',
+          message: 'The desktop app file is not yet available for download.',
+          instructions: [
+            '1. Upload the file to S3 bucket',
+            '2. Create a GitHub release with the file',
+            '3. For now, please use the web version at https://hireon-rho.vercel.app'
+          ],
           note: 'Contact us for early access to the desktop app.'
         });
+        return;
+      }
+    } catch (s3Error) {
+      logger.error(`S3 signed URL generation failed for ${platform}:`, s3Error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Download failed',
+        message: 'Failed to download the file. Please try again later.',
+        note: 'Contact us for early access to the desktop app.'
       });
       return;
     }
