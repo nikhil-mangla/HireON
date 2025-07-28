@@ -64,7 +64,13 @@ app.use(compression());
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // limit each IP to 20 requests per windowMs for auth endpoints (increased from 5)
-  message: 'Too many authentication attempts, please try again later.',
+  message: {
+    success: false,
+    error: 'Too many authentication attempts',
+    message: 'You have exceeded the maximum number of login attempts. Please wait 15 minutes before trying again.',
+    retryAfter: '15 minutes',
+    instructions: 'Take a break and try again in 15 minutes, or contact support if you need immediate assistance.'
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -740,7 +746,17 @@ app.post('/api/auth/signup', authLimiter, validateSignup, handleValidationErrors
       .single();
 
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+      return res.status(400).json({
+        success: false,
+        error: 'Account already exists',
+        message: 'An account with this email address already exists.',
+        instructions: 'If you already have an account, please try logging in instead.',
+        suggestions: [
+          'Try logging in with your existing password',
+          'Use "Forgot Password" if you forgot your password',
+          'Use a different email address if you want to create a new account'
+        ]
+      });
     }
 
     // Hash password
@@ -761,7 +777,17 @@ app.post('/api/auth/signup', authLimiter, validateSignup, handleValidationErrors
 
     if (insertError) {
       logger.error('Signup error:', insertError);
-      return res.status(500).json({ error: 'Failed to create user' });
+      return res.status(500).json({
+        success: false,
+        error: 'Account creation failed',
+        message: 'We encountered an issue while creating your account. Please try again.',
+        instructions: 'This might be a temporary issue. Please try again in a few moments.',
+        suggestions: [
+          'Try again in a few minutes',
+          'Check your internet connection',
+          'Contact support if the problem persists'
+        ]
+      });
     }
 
     // Generate token
@@ -826,7 +852,14 @@ app.post('/api/auth/login', authLimiter, validateLogin, handleValidationErrors, 
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        error: 'Account not found',
+        message: 'No account exists with this email address. Please check your email or create a new account.',
+        instructions: 'If you think this is an error, try signing up with this email address, or use the "Forgot Password" option if you already have an account.',
+        suggestions: [
+          'Check if the email address is correct',
+          'Try signing up if you don\'t have an account',
+          'Use "Forgot Password" if you forgot your password'
+        ]
       });
     }
 
@@ -836,7 +869,15 @@ app.post('/api/auth/login', authLimiter, validateLogin, handleValidationErrors, 
       logger.warn(`Failed login attempt for email: ${email}`);
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        error: 'Incorrect password',
+        message: 'The password you entered is incorrect. Please try again.',
+        instructions: 'Make sure you\'re using the correct password for this account.',
+        suggestions: [
+          'Check if Caps Lock is on',
+          'Make sure you\'re using the right password',
+          'Use "Forgot Password" to reset your password',
+          'Try again with the correct password'
+        ]
       });
     }
 
@@ -870,7 +911,14 @@ app.post('/api/auth/login', authLimiter, validateLogin, handleValidationErrors, 
     logger.error('Login error:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Login failed',
+      message: 'We encountered an issue while processing your login. Please try again.',
+      instructions: 'This might be a temporary issue. Please try again in a few moments.',
+      suggestions: [
+        'Try again in a few minutes',
+        'Check your internet connection',
+        'Contact support if the problem persists'
+      ]
     });
   }
 });
@@ -2783,6 +2831,25 @@ app.post('/api/test-email-now', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Rate limit status endpoint
+app.get('/api/debug/rate-limit-status', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Rate limit status',
+    authLimiter: {
+      windowMs: '15 minutes',
+      maxRequests: 20,
+      description: 'Authentication endpoints (login, signup, forgot-password)'
+    },
+    generalLimiter: {
+      windowMs: '15 minutes', 
+      maxRequests: 100,
+      description: 'General API endpoints'
+    },
+    note: 'If you hit rate limits, wait 15 minutes for reset'
+  });
 });
 
 // Test endpoint for advanced email functionality
