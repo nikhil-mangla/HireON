@@ -77,17 +77,43 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// CORS configuration - more restrictive for production
+// CORS configuration - allow both production and development origins
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        process.env.FRONTEND_URL, 
-        'https://hire-on-nikhil-manglas-projects.vercel.app',
-        'https://hireon-rho.vercel.app',
-        /^https:\/\/hireon-.*-nikhil-manglas-projects\.vercel\.app$/, // Allow all Vercel preview deployments
-        /^https:\/\/hireon-.*\.vercel\.app$/ // Allow all Vercel domains for hireon
-      ]
-    : ['http://localhost:5173', 'http://localhost:5180'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      // Production origins
+      process.env.FRONTEND_URL,
+      'https://hire-on-nikhil-manglas-projects.vercel.app',
+      'https://hireon-rho.vercel.app',
+      'https://hireon-aiel.onrender.com',
+      // Development origins
+      'http://localhost:5173',
+      'http://localhost:5180',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      // Vercel preview deployments
+      /^https:\/\/hireon-.*-nikhil-manglas-projects\.vercel\.app$/,
+      /^https:\/\/hireon-.*\.vercel\.app$/
+    ];
+    
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

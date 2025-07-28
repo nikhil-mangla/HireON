@@ -5,6 +5,7 @@ import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
 import PricingSection from './components/PricingSection';
 import DownloadPage from './components/DownloadPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import ScrollToTop from './components/ScrollToTop';
 import { Loader2 } from 'lucide-react';
 import './App.css';
@@ -74,6 +75,11 @@ function AppContent() {
           path="/download" 
           element={<DownloadPage />} 
         />  
+
+        <Route 
+          path="/reset-password" 
+          element={<ResetPasswordPage />} 
+        />
 
         {/* Protected Routes */}
         <Route 
