@@ -1043,9 +1043,19 @@ app.get('/api/download/:platform', (req, res) => {
       logger.info(`Direct download served for ${platform}: ${config.filename}`);
       return;
     } else {
-      // Local file doesn't exist, redirect to GitHub
-      logger.info(`Local file not found, redirecting to GitHub for ${platform}`);
-      res.redirect(config.githubUrl);
+      // Local file doesn't exist, provide helpful error message
+      logger.info(`Local file not found for ${platform}, providing download instructions`);
+      res.status(404).json({
+        success: false,
+        error: 'File not available for direct download',
+        message: 'The desktop app file is not yet available for direct download.',
+        instructions: [
+          '1. The file needs to be uploaded to the server',
+          '2. Or create a GitHub release with the file',
+          '3. For now, please use the web version at https://hireon-rho.vercel.app'
+        ],
+        note: 'Contact us for early access to the desktop app.'
+      });
       return;
     }
   }
