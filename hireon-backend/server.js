@@ -269,64 +269,38 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     logger.info(`Attempting to send password reset email to: ${email}`);
     logger.info(`Resend API key configured: ${!!process.env.RESEND_API_KEY}`);
     
-    // Try multiple "from" addresses in order of preference
-    const fromAddresses = [
-      'HireOn <onboarding@resend.dev>', // Resend's verified domain (works immediately)
-      'HireOn <noreply@hireon.tk>',     // Your custom domain (if verified)
-      'HireOn <noreply@hireon.com>',    // Alternative domain
-      'onboarding@resend.dev'           // Fallback to basic format
-    ];
+    // Use Resend's verified domain directly
+    try {
+      logger.info(`Attempting to send password reset email to: ${email}`);
+      
+      const { data, error } = await resend.emails.send({
+        from: 'onboarding@resend.dev', // Use Resend's verified domain directly
+        to: [email],
+        subject: 'HireOn - Password Reset Request',
+        html: emailHtml
+      });
 
-    let emailSent = false;
-    let lastError = null;
-
-    for (const fromAddress of fromAddresses) {
-      try {
-        logger.info(`Trying to send email from: ${fromAddress}`);
+      if (error) {
+        logger.error('Resend API error:', error);
+        logger.error('Resend API error details:', JSON.stringify(error, null, 2));
         
-        const { data, error } = await resend.emails.send({
-          from: fromAddress,
-          to: [email],
-          subject: 'HireOn - Password Reset Request',
-          html: emailHtml,
-          headers: {
-            'X-Entity-Ref-ID': `reset-${Date.now()}` // Add unique identifier for tracking
-          }
-        });
-
-        if (error) {
-          logger.error(`Resend API error with ${fromAddress}:`, error);
-          lastError = error;
-          
-          // If it's a domain verification error, try next address
-          if (error.message && (
-            error.message.includes('domain') || 
-            error.message.includes('verify') ||
-            error.message.includes('unauthorized')
-          )) {
-            continue;
-          }
-          
-          // For other errors, stop trying
-          break;
-        }
-
-        logger.info(`Password reset email sent successfully to: ${email} from: ${fromAddress}. Email ID: ${data?.id}`);
-        emailSent = true;
-        break;
-
-      } catch (sendError) {
-        logger.error(`Error sending with ${fromAddress}:`, sendError);
-        lastError = sendError;
-        continue;
+        // Return error with token for development
+        return {
+          success: false,
+          error: error,
+          resetToken, // Still return token for development
+          resetUrl
+        };
       }
-    }
 
-    if (!emailSent) {
-      logger.error('Failed to send email with all from addresses. Last error:', lastError);
+      logger.info(`Password reset email sent successfully to: ${email}. Email ID: ${data?.id}`);
+      return { success: true };
+
+    } catch (sendError) {
+      logger.error('Error sending email:', sendError);
       return {
         success: false,
-        error: lastError,
+        error: sendError,
         resetToken, // Still return token for development
         resetUrl
       };
@@ -2813,7 +2787,7 @@ app.post('/api/test-email-now', async (req, res) => {
     }
     
     const { data, error } = await resend.emails.send({
-      from: 'HireOn <onboarding@resend.dev>', // Use Resend's verified domain
+      from: 'onboarding@resend.dev', // Use Resend's verified domain directly
       to: [testEmail],
       subject: 'HireOn - Email Test',
       html: '<h1>Test Email</h1><p>If you receive this, your email service is working!</p>'
