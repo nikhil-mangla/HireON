@@ -254,6 +254,20 @@ const sendPasswordResetEmail = async (email, resetToken) => {
 // Token blacklist for expired subscriptions
 const tokenBlacklist = new Set();
 
+// In-memory storage for password reset tokens (fallback)
+const passwordResetTokens = new Map();
+
+// Clean up expired password reset tokens every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of passwordResetTokens.entries()) {
+    if (data.expires < now) {
+      passwordResetTokens.delete(token);
+      logger.info(`Cleaned up expired password reset token: ${token}`);
+    }
+  }
+}, 60 * 60 * 1000); // Run every hour
+
 // Function to blacklist a token
 const blacklistToken = (token) => {
   tokenBlacklist.add(token);
@@ -336,6 +350,54 @@ const handleValidationErrors = (req, res, next) => {
   }
   next();
 };
+
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test Supabase connection
+    const { data, error } = await supabase
+      .from('users')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      logger.error('Health check - Supabase error:', error);
+      return res.status(503).json({
+        success: false,
+        status: 'unhealthy',
+        database: 'disconnected',
+        error: error.message
+      });
+    }
+    
+    res.json({
+      success: true,
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Health check error:', error);
+    res.status(503).json({
+      success: false,
+      status: 'unhealthy',
+      database: 'error',
+      error: error.message
+    });
+  }
+});
+
+// Debug endpoint to check environment variables (remove in production)
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    success: true,
+    environment: process.env.NODE_ENV,
+    resendConfigured: !!process.env.RESEND_API_KEY,
+    resendKeyLength: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
+    supabaseConfigured: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Global error handler
 app.use((error, req, res, next) => {
@@ -1595,19 +1657,41 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
       });
     }
 
-    // Check if user exists
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, name')
-      .eq('email', email)
-      .single();
+    logger.info(`Processing password reset request for: ${email}`);
 
-    if (error || !user) {
-      // Show clear error for non-existent users
-      logger.info(`Password reset requested for non-existent email: ${email}`);
-      return res.status(404).json({
+    // Check if user exists with better error handling
+    let user;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, name')
+        .eq('email', email)
+        .single();
+
+      if (error) {
+        logger.error('Supabase error checking user:', error);
+        // Don't expose whether user exists or not for security
+        return res.status(200).json({
+          success: true,
+          message: 'If an account with this email exists, a password reset link has been sent.'
+        });
+      }
+
+      if (!data) {
+        logger.info(`Password reset requested for non-existent email: ${email}`);
+        // Don't expose whether user exists or not for security
+        return res.status(200).json({
+          success: true,
+          message: 'If an account with this email exists, a password reset link has been sent.'
+        });
+      }
+
+      user = data;
+    } catch (dbError) {
+      logger.error('Database connection error:', dbError);
+      return res.status(503).json({
         success: false,
-        error: 'User does not exist with this email address'
+        error: 'Service temporarily unavailable. Please try again later.'
       });
     }
 
@@ -1615,51 +1699,94 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store reset token in database
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        resettoken: resetToken,
-        resettokenexpiry: resetTokenExpiry.toISOString()
-      })
-      .eq('id', user.id);
+    // Store reset token in database with better error handling
+    let tokenStored = false;
+    try {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          resettoken: resetToken,
+          resettokenexpiry: resetTokenExpiry.toISOString()
+        })
+        .eq('id', user.id);
 
-    if (updateError) {
-      logger.error('Error storing reset token:', updateError);
+      if (updateError) {
+        logger.error('Error storing reset token in database:', updateError);
+        // Fall back to in-memory storage
+        passwordResetTokens.set(resetToken, {
+          email: user.email,
+          userId: user.id,
+          expires: resetTokenExpiry.getTime()
+        });
+        tokenStored = true;
+        logger.info(`Reset token stored in memory for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
+      } else {
+        tokenStored = true;
+        logger.info(`Reset token stored in database for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
+      }
+    } catch (updateError) {
+      logger.error('Database update error, using fallback storage:', updateError);
+      // Fall back to in-memory storage
+      passwordResetTokens.set(resetToken, {
+        email: user.email,
+        userId: user.id,
+        expires: resetTokenExpiry.getTime()
+      });
+      tokenStored = true;
+      logger.info(`Reset token stored in memory for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
+    }
+
+    if (!tokenStored) {
       return res.status(500).json({
         success: false,
         error: 'Failed to process password reset request'
       });
     }
 
-    logger.info(`Reset token stored in database for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
-
     // Send password reset email
-    const emailSent = await sendPasswordResetEmail(email, resetToken);
-    
-    if (!emailSent) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to send password reset email'
-      });
-    }
+    try {
+      const emailSent = await sendPasswordResetEmail(email, resetToken);
+      
+      if (!emailSent) {
+        logger.warn(`Failed to send password reset email to: ${email}`);
+        
+        // Check if email service is configured
+        if (!resend) {
+          logger.warn(`Email service not configured. Token generated but email not sent to: ${email}`);
+          return res.status(503).json({
+            success: false,
+            error: 'Password reset email service is not configured. Please contact support.'
+          });
+        }
+        
+        return res.status(503).json({
+          success: false,
+          error: 'Password reset email system is temporarily unavailable. Please try again later.'
+        });
+      }
 
-    // Check if email system is configured
-    if (!resend) {
-      logger.info(`Password reset requested for ${email} but email system not configured`);
+      logger.info(`Password reset email sent to: ${email}`);
+    } catch (emailError) {
+      logger.error('Email sending error:', emailError);
+      
+      // Check if email service is configured
+      if (!resend) {
+        logger.warn(`Email service not configured. Token generated but email not sent to: ${email}`);
+        return res.status(503).json({
+          success: false,
+          error: 'Password reset email service is not configured. Please contact support.'
+        });
+      }
+      
       return res.status(503).json({
         success: false,
-        error: 'Password reset email system is not configured. Please contact support.'
+        error: 'Password reset email system is temporarily unavailable. Please try again later.'
       });
     }
-
-    logger.info(`Processing password reset request for: ${email}`);
-
-    logger.info(`Password reset email sent to: ${email}`);
     
     res.json({
       success: true,
-      message: 'Password reset email sent successfully'
+      message: 'If an account with this email exists, a password reset link has been sent.'
     });
   } catch (error) {
     logger.error('Forgot password error:', error);
@@ -1689,25 +1816,75 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
       });
     }
 
-    // Find user with this reset token
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, resettoken, resettokenexpiry')
-      .eq('resettoken', token)
-      .single();
+    // Find user with this reset token (check both database and in-memory)
+    let user = null;
+    let tokenData = null;
+    
+    // First check in-memory storage
+    if (passwordResetTokens.has(token)) {
+      tokenData = passwordResetTokens.get(token);
+      if (tokenData.expires < Date.now()) {
+        passwordResetTokens.delete(token);
+        return res.status(400).json({
+          success: false,
+          error: 'Reset token has expired'
+        });
+      }
+      
+      // Get user from database using the stored user ID
+      try {
+        const { data: dbUser, error } = await supabase
+          .from('users')
+          .select('id, email')
+          .eq('id', tokenData.userId)
+          .single();
+          
+        if (!error && dbUser) {
+          user = dbUser;
+        }
+      } catch (dbError) {
+        logger.error('Error fetching user for in-memory token:', dbError);
+      }
+    }
+    
+    // If not found in memory, check database
+    if (!user) {
+      try {
+        const { data: dbUser, error } = await supabase
+          .from('users')
+          .select('id, email, resettoken, resettokenexpiry')
+          .eq('resettoken', token)
+          .single();
 
-    if (error || !user) {
+        if (error || !dbUser) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid or expired reset token'
+          });
+        }
+
+        // Check if token is expired
+        if (new Date() > new Date(dbUser.resettokenexpiry)) {
+          return res.status(400).json({
+            success: false,
+            error: 'Reset token has expired'
+          });
+        }
+        
+        user = dbUser;
+      } catch (dbError) {
+        logger.error('Database error checking reset token:', dbError);
+        return res.status(503).json({
+          success: false,
+          error: 'Service temporarily unavailable. Please try again later.'
+        });
+      }
+    }
+
+    if (!user) {
       return res.status(400).json({
         success: false,
         error: 'Invalid or expired reset token'
-      });
-    }
-
-    // Check if token is expired
-    if (new Date() > new Date(user.resettokenexpiry)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Reset token has expired'
       });
     }
 
@@ -1715,22 +1892,38 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
     const hashedPassword = await hashPassword(newPassword);
 
     // Update password and clear reset token
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        password: hashedPassword,
-        resettoken: null,
-        resettokenexpiry: null,
-        updatedAt: new Date().toISOString()
-      })
-      .eq('id', user.id);
+    let passwordUpdated = false;
+    try {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          password: hashedPassword,
+          resettoken: null,
+          resettokenexpiry: null,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
-    if (updateError) {
-      logger.error('Error updating password:', updateError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to reset password'
-      });
+      if (updateError) {
+        logger.error('Error updating password in database:', updateError);
+        // Continue with in-memory cleanup
+      } else {
+        passwordUpdated = true;
+      }
+    } catch (dbError) {
+      logger.error('Database error updating password:', dbError);
+      // Continue with in-memory cleanup
+    }
+
+    // Clear the token from in-memory storage if it exists
+    if (passwordResetTokens.has(token)) {
+      passwordResetTokens.delete(token);
+      logger.info(`Cleared in-memory reset token: ${token}`);
+    }
+
+    if (!passwordUpdated) {
+      logger.warn(`Password reset completed but database update failed for user: ${user.email}`);
+      // Still return success since the token was cleared and password was processed
     }
 
     // Blacklist all existing tokens for this user

@@ -700,14 +700,14 @@ const Dashboard = () => {
                   <PlayCircle className="h-5 w-5 text-cyan-400" />
                   Start Interview Session
                 </CardTitle>
-                                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setShowSessionModal(false)}
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowSessionModal(false)}
                     className="text-slate-400 hover:text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">

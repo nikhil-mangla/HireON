@@ -75,94 +75,94 @@ const SignupForm = ({ onSwitchToLogin }) => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
           <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-300">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-2">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="space-y-2">
           <Label htmlFor="name" className="text-white">Full Name</Label>
-          <div className="relative">
+            <div className="relative">
             <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="Enter your full name"
-              value={formData.name}
-              onChange={handleChange}
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={handleChange}
               className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-white/40"
-              required
-            />
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
+          <div className="space-y-2">
           <Label htmlFor="email" className="text-white">Email</Label>
-          <div className="relative">
+            <div className="relative">
             <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
               className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-white/40"
-              required
-            />
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
+          <div className="space-y-2">
           <Label htmlFor="password" className="text-white">Password</Label>
-          <div className="relative">
+            <div className="relative">
             <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Create a password"
-              value={formData.password}
-              onChange={handleChange}
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
               className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-white/40"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-white"
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </button>
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
+          <div className="space-y-2">
           <Label htmlFor="confirmPassword" className="text-white">Confirm Password</Label>
-          <div className="relative">
+            <div className="relative">
             <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
               className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-white/40"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-white"
-            >
-              {showConfirmPassword ? <EyeOff /> : <Eye />}
-            </button>
+              >
+                {showConfirmPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
           </div>
-        </div>
 
         <Button 
           type="submit" 
@@ -177,18 +177,18 @@ const SignupForm = ({ onSwitchToLogin }) => {
           ) : (
             'Create account'
           )}
-        </Button>
-      </form>
+          </Button>
+        </form>
 
       <div className="text-center text-sm text-gray-300">
-        Already have an account?{' '}
-        <button
-          onClick={onSwitchToLogin}
+          Already have an account?{' '}
+          <button
+            onClick={onSwitchToLogin}
           className="text-cyan-400 hover:text-cyan-300 font-medium hover:underline"
-        >
-          Sign in
-        </button>
-      </div>
+          >
+            Sign in
+          </button>
+        </div>
     </div>
   );
 };
