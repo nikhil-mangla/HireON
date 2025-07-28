@@ -278,7 +278,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     // Use Resend's verified domain directly
     try {
       const { data, error } = await resend.emails.send({
-        from: 'HireOn <noreply@yourdomain.com>', // Replace with your verified domain
+        from: 'onboarding@resend.dev', // Use Resend's verified domain
         to: [email],
         subject: 'HireOn - Password Reset Request',
         html: emailHtml
