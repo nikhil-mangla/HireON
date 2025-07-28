@@ -28,7 +28,7 @@ import {
   Flag,
   DollarSign
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PrivacyPolicyModal from './PrivacyPolicyModal';
 import TermsOfServiceModal from './TermsOfServiceModal';
 
@@ -41,6 +41,19 @@ const IntroPage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 50, y: 100 });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const features = [
     {
@@ -138,23 +151,46 @@ const IntroPage = () => {
   const handleMouseDown = (e) => {
     setIsDragging(true);
     const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
+    const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
     setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: clientX - rect.left,
+      y: clientY - rect.top
     });
   };
 
   const handleMouseMove = (e) => {
     if (isDragging) {
+      const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
+      const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
       setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y
+        x: clientX - dragOffset.x,
+        y: clientY - dragOffset.y
       });
     }
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleTouchStart = (e) => {
+    // Don't prevent default on the close button
+    if (e.target.closest('button')) {
+      return;
+    }
+    e.preventDefault();
+    handleMouseDown(e);
+  };
+
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    handleMouseMove(e);
+  };
+
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    handleMouseUp();
   };
 
   return (
@@ -181,37 +217,38 @@ const IntroPage = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-20 flex justify-between items-center px-8 py-6">
-        <div className="flex items-center gap-4">
+      <nav className="relative z-20 flex justify-between items-center px-4 sm:px-8 py-4 sm:py-6">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className="relative">
-            <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40">
-              <Target className="h-7 w-7 text-white" />
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40">
+              <Target className="h-4 w-4 sm:h-7 sm:w-7 text-white" />
             </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full animate-pulse"></div>
+            <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full animate-pulse"></div>
           </div>
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">
             HireOn
           </h1>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Button 
             onClick={() => setShowFAQ(!showFAQ)}
             variant="outline" 
-            className="border-violet-500/50 text-violet-400 hover:bg-violet-500/20"
+            className="border-violet-500/50 text-violet-400 hover:bg-violet-500/20 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm"
           >
-            <Code className="h-4 w-4 mr-2" />
-            FAQ
+            <Code className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">FAQ</span>
           </Button>
           <Link to="/download">
-            <Button variant="outline" className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20">
-              <Download className="h-4 w-4 mr-2" />
-              Download
+            <Button variant="outline" className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/20 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm">
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Download</span>
             </Button>
           </Link>
           <Link to="/auth">
-            <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white">
-              Get Started
+            <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm">
+              <span className="hidden sm:inline">Get Started</span>
+              <span className="sm:hidden">Start</span>
             </Button>
           </Link>
         </div>
@@ -220,52 +257,52 @@ const IntroPage = () => {
       <div className="relative z-10">
         {/* Main Content Grid */}
         <div className="min-h-screen">
-          <div className="max-w-7xl mx-auto px-6 py-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
               
               {/* Left Column - Hero Section */}
               <div className="flex flex-col justify-center">
                 <div className="max-w-xl">
                   {/* Main Headline */}
-                  <div className="mb-12">
-                    <h2 className="text-6xl font-bold mb-6 leading-tight">
+                  <div className="mb-8 sm:mb-12">
+                    <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight">
                       <span className="text-white">Ace Your Next</span>
                       <br />
                       <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">
                         Dream Job
                       </span>
                     </h2>
-                    <p className="text-xl text-slate-300 mb-8 leading-relaxed font-light">
+                    <p className="text-base sm:text-lg lg:text-xl text-slate-300 mb-6 sm:mb-8 leading-relaxed font-light">
                       Master technical interviews with AI-powered responses, optimized solutions with different language support.
                     </p>
                     
-                    <div className="flex items-center gap-6 mb-10">
-                      <Badge className="bg-gradient-to-r from-emerald-500/30 to-teal-500/30 text-emerald-300 border-emerald-500/50 px-4 py-2 text-sm font-medium backdrop-blur-sm">
-                        <CheckCircle className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 mb-8 sm:mb-10">
+                      <Badge className="bg-gradient-to-r from-emerald-500/30 to-teal-500/30 text-emerald-300 border-emerald-500/50 px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm font-medium backdrop-blur-sm">
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         • Code • MCQ • Interview
                       </Badge>
-                      <Badge className="bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-amber-300 border-amber-500/50 px-4 py-2 text-sm font-medium backdrop-blur-sm">
-                        <Star className="h-4 w-4 mr-2" />
+                      <Badge className="bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-amber-300 border-amber-500/50 px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm font-medium backdrop-blur-sm">
+                        <Star className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         4.9/5 Rating
                       </Badge>
                     </div>
                   </div>
 
                   {/* Features Grid */}
-                  <div className="grid grid-cols-1 gap-8">
+                  <div className="grid grid-cols-1 gap-6 sm:gap-8">
                     {features.map((feature, index) => (
-                      <div key={index} className="flex items-start gap-5 group cursor-pointer transform hover:scale-105 transition-all duration-300">
+                      <div key={index} className="flex items-start gap-3 sm:gap-5 group cursor-pointer transform hover:scale-105 transition-all duration-300">
                         <div className="relative">
-                          <div className="p-4 bg-gradient-to-r from-slate-800/80 to-slate-700/80 rounded-2xl group-hover:from-slate-700/80 group-hover:to-slate-600/80 transition-all duration-300 shadow-xl backdrop-blur-sm border border-slate-600/50">
+                          <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-800/80 to-slate-700/80 rounded-2xl group-hover:from-slate-700/80 group-hover:to-slate-600/80 transition-all duration-300 shadow-xl backdrop-blur-sm border border-slate-600/50">
                             <div className="text-cyan-400 group-hover:text-cyan-300 transition-colors">
                               {feature.icon}
                             </div>
                           </div>
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse"></div>
+                          <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse"></div>
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-lg mb-2 text-white group-hover:text-cyan-300 transition-colors">{feature.title}</h3>
-                          <p className="text-slate-400 leading-relaxed">{feature.description}</p>
+                          <h3 className="font-bold text-base sm:text-lg mb-1 sm:mb-2 text-white group-hover:text-cyan-300 transition-colors">{feature.title}</h3>
+                          <p className="text-sm sm:text-base text-slate-400 leading-relaxed">{feature.description}</p>
                         </div>
                       </div>
                     ))}
@@ -275,7 +312,7 @@ const IntroPage = () => {
 
               {/* Right Column - Performance Section */}
               <div className="flex items-center justify-center">
-                <div className="w-full space-y-8">
+                <div className="w-full space-y-6 sm:space-y-8">
                   {/* Performance Section */}
                   <div className="relative">
                     {/* Enhanced glassmorphism background */}
@@ -283,32 +320,32 @@ const IntroPage = () => {
                     <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
                     
                     {/* Content */}
-                    <div className="relative z-10 p-10">
-                      <div className="text-center mb-8">
-                        <h2 className="text-4xl font-bold text-white mb-4">Performance with Top Interview Platforms</h2>
-                        <p className="text-xl text-slate-300">
+                    <div className="relative z-10 p-6 sm:p-10">
+                      <div className="text-center mb-6 sm:mb-8">
+                        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">Performance with Top Interview Platforms</h2>
+                        <p className="text-base sm:text-lg lg:text-xl text-slate-300">
                           Seamlessly integrate with all major interview platforms
                         </p>
                       </div>
 
                       {/* Platforms Grid */}
-                      <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:gap-4">
                         {platforms.map((platform) => (
-                          <div key={platform.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-xl flex items-center justify-center border border-cyan-500/50">
+                          <div key={platform.id} className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300">
+                            <div className="flex items-center gap-3 sm:gap-4">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-xl flex items-center justify-center border border-cyan-500/50">
                                 <div className="text-cyan-400">
                                   {platform.icon}
                                 </div>
                               </div>
                               <div>
-                                <h3 className="text-lg font-semibold text-white">{platform.name}</h3>
-                                <p className="text-sm text-slate-400">Platform {platform.id}</p>
+                                <h3 className="text-base sm:text-lg font-semibold text-white">{platform.name}</h3>
+                                <p className="text-xs sm:text-sm text-slate-400">Platform {platform.id}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                              <span className="text-emerald-400 font-medium text-sm">{platform.status}</span>
+                              <span className="text-emerald-400 font-medium text-xs sm:text-sm">{platform.status}</span>
                             </div>
                           </div>
                         ))}
@@ -321,28 +358,27 @@ const IntroPage = () => {
           </div>
 
           {/* Get Started & Pricing CTA Section */}
-          <div className="max-w-4xl mx-auto px-6 py-16">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-slate-50/5 to-transparent backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl"></div>
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
               
-              <div className="relative z-10 p-12 text-center">
-                <h2 className="text-4xl font-bold text-white mb-6">Ready to Ace Your Interviews?</h2>
-                <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
+              <div className="relative z-10 p-6 sm:p-12 text-center">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 sm:mb-6">Ready to Ace Your Interviews?</h2>
+                <p className="text-base sm:text-lg lg:text-xl text-slate-300 mb-8 sm:mb-10 max-w-2xl mx-auto">
                   Join thousands of developers who are already using HireOn to land their dream jobs. 
                   Start your journey today with our powerful AI-powered interview assistant.
                 </p>
                 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
                   <Link to="/auth">
-                    <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-6 px-12 text-lg shadow-xl transform hover:scale-105 transition-all duration-300">
-                      <Zap className="h-5 w-5 mr-3" />
+                    <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-4 sm:py-6 px-8 sm:px-12 text-base sm:text-lg shadow-xl transform hover:scale-105 transition-all duration-300 w-full sm:w-auto">
+                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
                       Get Started Free
                     </Button>
                   </Link>
                   <Link to="/pricing">
-                    <Button variant="outline" className="border-violet-500/50 text-violet-400 hover:bg-violet-500/20 font-semibold py-6 px-12 text-lg backdrop-blur-sm transform hover:scale-105 transition-all duration-300">
-                      
+                    <Button variant="outline" className="border-violet-500/50 text-violet-400 hover:bg-violet-500/20 font-semibold py-4 sm:py-6 px-8 sm:px-12 text-base sm:text-lg backdrop-blur-sm transform hover:scale-105 transition-all duration-300 w-full sm:w-auto">
                       View Pricing
                     </Button>
                   </Link>
@@ -354,77 +390,77 @@ const IntroPage = () => {
           </div>
 
           {/* Visual Demonstrations Section */}
-          <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-slate-50/5 to-transparent backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl"></div>
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
               
-              <div className="relative z-10 p-10">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-white mb-4">Visual Demonstrations</h2>
-                  <p className="text-lg text-slate-300">
+              <div className="relative z-10 p-6 sm:p-10">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Visual Demonstrations</h2>
+                  <p className="text-base sm:text-lg text-slate-300">
                     See HireOn in action across different scenarios
                   </p>
                 </div>
 
                 {/* Image Grid - 3 rows of 2 images each */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Row 1: Images 1 & 2 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div className="w-full aspect-video bg-gradient-to-br from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm flex items-center justify-center hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 cursor-pointer">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-cyan-500/50">
-                          <Code className="h-8 w-8 text-cyan-400" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border border-cyan-500/50">
+                          <Code className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-400" />
                         </div>
-                        <p className="text-slate-400 text-lg">Demo Image 1</p>
+                        <p className="text-slate-400 text-sm sm:text-lg">Demo Image 1</p>
                       </div>
                     </div>
                     <div className="w-full aspect-video bg-gradient-to-br from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm flex items-center justify-center hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 cursor-pointer">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/50">
-                          <Code className="h-8 w-8 text-emerald-400" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border border-emerald-500/50">
+                          <Code className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-400" />
                         </div>
-                        <p className="text-slate-400 text-lg">Demo Image 2</p>
+                        <p className="text-slate-400 text-sm sm:text-lg">Demo Image 2</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Row 2: Images 3 & 4 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div className="w-full aspect-video bg-gradient-to-br from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm flex items-center justify-center hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 cursor-pointer">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-r from-violet-500/30 to-purple-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-violet-500/50">
-                          <Code className="h-8 w-8 text-violet-400" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-violet-500/30 to-purple-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border border-violet-500/50">
+                          <Code className="h-6 w-6 sm:h-8 sm:w-8 text-violet-400" />
                         </div>
-                        <p className="text-slate-400 text-lg">Demo Image 3</p>
+                        <p className="text-slate-400 text-sm sm:text-lg">Demo Image 3</p>
                       </div>
                     </div>
                     <div className="w-full aspect-video bg-gradient-to-br from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm flex items-center justify-center hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 cursor-pointer">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-r from-rose-500/30 to-pink-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-rose-500/50">
-                          <Code className="h-8 w-8 text-rose-400" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-rose-500/30 to-pink-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border border-rose-500/50">
+                          <Code className="h-6 w-6 sm:h-8 sm:w-8 text-rose-400" />
                         </div>
-                        <p className="text-slate-400 text-lg">Demo Image 4</p>
+                        <p className="text-slate-400 text-sm sm:text-lg">Demo Image 4</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Row 3: Images 5 & 6 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div className="w-full aspect-video bg-gradient-to-br from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm flex items-center justify-center hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 cursor-pointer">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-r from-amber-500/30 to-orange-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-500/50">
-                          <Code className="h-8 w-8 text-amber-400" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-amber-500/30 to-orange-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border border-amber-500/50">
+                          <Code className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400" />
                         </div>
-                        <p className="text-slate-400 text-lg">Demo Image 5</p>
+                        <p className="text-slate-400 text-sm sm:text-lg">Demo Image 5</p>
                       </div>
                     </div>
                     <div className="w-full aspect-video bg-gradient-to-br from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm flex items-center justify-center hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300 cursor-pointer">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-r from-indigo-500/30 to-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/50">
-                          <Code className="h-8 w-8 text-indigo-400" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-indigo-500/30 to-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border border-indigo-500/50">
+                          <Code className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-400" />
                         </div>
-                        <p className="text-slate-400 text-lg">Demo Image 6</p>
+                        <p className="text-slate-400 text-sm sm:text-lg">Demo Image 6</p>
                       </div>
                     </div>
                   </div>
@@ -434,28 +470,28 @@ const IntroPage = () => {
           </div>
 
           {/* Approach Steps Section */}
-          <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-slate-50/5 to-transparent backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl"></div>
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
               
-              <div className="relative z-10 p-10">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-white mb-4">Our Approach</h2>
-                  <p className="text-lg text-slate-300">
+              <div className="relative z-10 p-6 sm:p-10">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Our Approach</h2>
+                  <p className="text-base sm:text-lg text-slate-300">
                     Systematic problem-solving methodology
                   </p>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {approachSteps.map((step, index) => (
-                    <div key={index} className="flex items-start gap-4 p-4 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300">
-                      <div className="w-12 h-12 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-xl flex items-center justify-center border border-cyan-500/50 flex-shrink-0">
-                        <span className="text-cyan-400 font-bold text-sm">{step.step}</span>
+                    <div key={index} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-2xl border border-slate-600/50 backdrop-blur-sm hover:from-slate-700/60 hover:to-slate-600/60 transition-all duration-300">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-xl flex items-center justify-center border border-cyan-500/50 flex-shrink-0">
+                        <span className="text-cyan-400 font-bold text-xs sm:text-sm">{step.step}</span>
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-white mb-2">{step.title}</h3>
-                        <p className="text-slate-400 leading-relaxed">{step.description}</p>
+                        <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">{step.title}</h3>
+                        <p className="text-sm sm:text-base text-slate-400 leading-relaxed">{step.description}</p>
                       </div>
                     </div>
                   ))}
@@ -465,15 +501,15 @@ const IntroPage = () => {
           </div>
 
           {/* Optimized Code Section */}
-          <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-slate-50/5 to-transparent backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl"></div>
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
               
-              <div className="relative z-10 p-10">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-white mb-4">Optimized Code Solutions</h2>
-                  <p className="text-lg text-slate-300">
+              <div className="relative z-10 p-6 sm:p-10">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Optimized Code Solutions</h2>
+                  <p className="text-base sm:text-lg text-slate-300">
                     Multi-language support with complexity analysis
                   </p>
                 </div>
@@ -484,7 +520,7 @@ const IntroPage = () => {
                     <button
                       key={lang}
                       onClick={() => setSelectedLanguage(lang)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                      className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-300 text-xs sm:text-sm ${
                         selectedLanguage === lang
                           ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
                           : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/60'
@@ -496,7 +532,7 @@ const IntroPage = () => {
                 </div>
 
                 <div className="mt-4 text-center">
-                  <p className="text-slate-400 text-sm">Optimized solutions for various algorithms</p>
+                  <p className="text-slate-400 text-xs sm:text-sm">Optimized solutions for various algorithms</p>
                 </div>
               </div>
             </div>
@@ -509,55 +545,80 @@ const IntroPage = () => {
             className="fixed inset-0 z-50 pointer-events-none"
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClick={(e) => {
+              // Close FAQ when clicking outside the window on mobile
+              if (isMobile && e.target === e.currentTarget) {
+                setShowFAQ(false);
+              }
+            }}
+            onTouchStart={(e) => {
+              // Close FAQ when touching outside the window on mobile
+              if (isMobile && e.target === e.currentTarget) {
+                setShowFAQ(false);
+              }
+            }}
           >
             <div 
-              className="absolute w-96 max-h-[80vh] bg-gradient-to-br from-slate-900/95 to-black/95 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl pointer-events-auto overflow-hidden"
+              className="absolute w-[90vw] sm:w-96 max-h-[80vh] bg-gradient-to-br from-slate-900/95 to-black/95 backdrop-blur-xl rounded-2xl border border-slate-600/50 shadow-2xl pointer-events-auto overflow-hidden"
               style={{
-                left: `${position.x}px`,
-                top: `${position.y}px`,
+                left: isMobile ? '5vw' : `${position.x}px`,
+                top: isMobile ? '10vh' : `${position.y}px`,
                 cursor: isDragging ? 'grabbing' : 'grab'
               }}
             >
               {/* Draggable Header */}
               <div 
-                className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-b border-slate-600/50 cursor-grab active:cursor-grabbing"
+                className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-b border-slate-600/50 cursor-grab active:cursor-grabbing"
                 onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg flex items-center justify-center">
-                    <Code className="h-4 w-4 text-white" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg flex items-center justify-center">
+                    <Code className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">FAQ & Help</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-white">FAQ & Help</h3>
                 </div>
                 <button 
                   onClick={() => setShowFAQ(false)}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowFAQ(false);
+                  }}
+                  className="text-slate-400 hover:text-white transition-colors p-2 -m-2 touch-manipulation select-none bg-slate-800/50 rounded-lg hover:bg-slate-700/50"
+                  style={{ touchAction: 'manipulation' }}
+                  aria-label="Close FAQ"
                 >
-                  <ChevronUp className="h-5 w-5" />
+                  <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </div>
 
               {/* FAQ Content */}
-              <div className="p-4 max-h-[calc(80vh-80px)] overflow-y-auto">
-                <div className="space-y-4">
+              <div className="p-3 sm:p-4 max-h-[calc(80vh-80px)] overflow-y-auto">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Basic Checks Section */}
-                  <div className="mb-6">
-                    <h4 className="text-lg font-semibold text-white mb-3">Basic Checks</h4>
-                    <p className="text-sm text-slate-300 mb-4">Verify if Application works on your system before subscribing</p>
+                  <div className="mb-4 sm:mb-6">
+                    <h4 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">Basic Checks</h4>
+                    <p className="text-xs sm:text-sm text-slate-300 mb-3 sm:mb-4">Verify if Application works on your system before subscribing</p>
                     
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {[
                         { step: 1, title: "Download the free Application", desc: "Download the free application from our website" },
                         { step: 2, title: "Launch the Application", desc: "When you run the app for the first time, Windows may show a SmartScreen warning since it's a new file. Just click \"More info\" and then \"Run anyway\" to proceed." },
                         { step: 3, title: "Share your full screen on Google Meet", desc: "Start a Google Meet call, join the same call with another device as well and share your full screen, check on another device it's working or not" },
                         { step: 4, title: "Check visibility", desc: "If it's not visible, you are good to subscribe. 99% of cases it's not visible" }
                       ].map((item) => (
-                        <div key={item.step} className="flex items-start gap-3 p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                          <div className="w-6 h-6 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div key={item.step} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-white text-xs font-bold">{item.step}</span>
                           </div>
                           <div>
-                            <h5 className="text-sm font-semibold text-white mb-1">{item.title}</h5>
+                            <h5 className="text-xs sm:text-sm font-semibold text-white mb-1">{item.title}</h5>
                             <p className="text-xs text-slate-400">{item.desc}</p>
                           </div>
                         </div>
@@ -567,8 +628,8 @@ const IntroPage = () => {
 
                   {/* FAQ Items */}
                   <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">Frequently Asked Questions</h4>
-                    <div className="space-y-3">
+                    <h4 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">Frequently Asked Questions</h4>
+                    <div className="space-y-2 sm:space-y-3">
                       {[
                         { q: "Which type of Interview I can give?", a: "Yes, you can give any type of interview using this application. It supports all types of interviews including coding interviews, technical interviews, HR interviews, and more." },
                         { q: "Can I get the approach of the solution?", a: "Yes, our AI provides detailed solution approaches including problem analysis, algorithm design, step-by-step implementation, and complexity analysis." },
@@ -576,8 +637,8 @@ const IntroPage = () => {
                         { q: "Will the application be visible while switching tabs?", a: "No, the application is designed to be undetectable and will not be visible while switching tabs, sharing your screen, or in the task manager, or on task bar." },
                         { q: "It's not working on my system, what should I do?", a: "Restart your system and try again. If it still doesn't work, please contact our support team for assistance." }
                       ].map((faq, index) => (
-                        <div key={index} className="p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                          <h5 className="text-sm font-semibold text-white mb-2">{faq.q}</h5>
+                        <div key={index} className="p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                          <h5 className="text-xs sm:text-sm font-semibold text-white mb-1 sm:mb-2">{faq.q}</h5>
                           <p className="text-xs text-slate-400">{faq.a}</p>
                         </div>
                       ))}
@@ -592,108 +653,108 @@ const IntroPage = () => {
 
 
         {/* Keyboard Shortcuts Section */}
-        <div className="max-w-6xl mx-auto px-6 py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-slate-50/5 to-transparent backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
             
-            <div className="relative z-10 p-12">
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-white mb-4">Keyboard Shortcuts</h2>
-                <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+            <div className="relative z-10 p-6 sm:p-12">
+              <div className="text-center mb-8 sm:mb-12">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">Keyboard Shortcuts</h2>
+                <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-3xl mx-auto">
                   Master HireOn with these powerful keyboard shortcuts for lightning-fast workflow
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                 {/* Screenshot & Processing */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center">
-                      <Code className="h-5 w-5 text-white" />
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center">
+                      <Code className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white">📸 Screenshot & Processing</h3>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">📸 Screenshot & Processing</h3>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Take a screenshot</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-cyan-400 rounded-md text-sm font-mono">Cmd/Ctrl + G</kbd>
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Take a screenshot</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-cyan-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + G</kbd>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Process screenshots for coding </span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-cyan-400 rounded-md text-sm font-mono">Cmd/Ctrl + Enter</kbd>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Process screenshots for coding </span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-cyan-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + Enter</kbd>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Process screenshots for MCQ</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-cyan-400 rounded-md text-sm font-mono">Option/Alt + Enter</kbd>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Process screenshots for MCQ</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-cyan-400 rounded-md text-xs sm:text-sm font-mono">Option/Alt + Enter</kbd>
                     </div>
                   </div>
                 </div>
 
                 {/* Reset & Control */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
-                      <Zap className="h-5 w-5 text-white" />
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
+                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white">⚡ Reset & Control</h3>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">⚡ Reset & Control</h3>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Cancel requests and reset queues</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-emerald-400 rounded-md text-sm font-mono">Cmd/Ctrl + R</kbd>
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Cancel requests and reset queues</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-emerald-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + R</kbd>
                     </div>
                   </div>
                 </div>
 
                 {/* Window Management */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl flex items-center justify-center">
-                      <Monitor className="h-5 w-5 text-white" />
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl flex items-center justify-center">
+                      <Monitor className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white">🪟 Window Management</h3>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">🪟 Window Management</h3>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Toggle main window (show/hide)</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-sm font-mono">Cmd/Ctrl + B</kbd>
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Toggle main window (show/hide)</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + B</kbd>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Move window left</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-sm font-mono">Cmd/Ctrl + ←</kbd>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Move window left</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + ←</kbd>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Move window right</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-sm font-mono">Cmd/Ctrl + →</kbd>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Move window right</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + →</kbd>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Move window up</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-sm font-mono">Cmd/Ctrl + ↑</kbd>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Move window up</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + ↑</kbd>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Move window down</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-sm font-mono">Cmd/Ctrl + ↓</kbd>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Move window down</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-violet-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + ↓</kbd>
                     </div>
                   </div>
                 </div>
 
                 {/* Audio Transcription */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl flex items-center justify-center">
-                      <Target className="h-5 w-5 text-white" />
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl flex items-center justify-center">
+                      <Target className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white">🎤 Audio Transcription</h3>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">🎤 Audio Transcription</h3>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Start audio transcription/listening</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-rose-400 rounded-md text-sm font-mono">Cmd/Ctrl + K</kbd>
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Start audio transcription/listening</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-rose-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + K</kbd>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
-                      <span className="text-slate-300">Stop audio transcription</span>
-                      <kbd className="px-3 py-1 bg-slate-700 text-rose-400 rounded-md text-sm font-mono">Cmd/Ctrl + D</kbd>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-slate-800/60 to-slate-700/60 rounded-lg border border-slate-600/30">
+                      <span className="text-slate-300 text-sm sm:text-base">Stop audio transcription</span>
+                      <kbd className="px-2 sm:px-3 py-1 bg-slate-700 text-rose-400 rounded-md text-xs sm:text-sm font-mono">Cmd/Ctrl + D</kbd>
                     </div>
                   </div>
                 </div>
@@ -734,22 +795,22 @@ const IntroPage = () => {
         </div>
 
         {/* FAQ CTA Section */}
-        <div className="max-w-4xl mx-auto px-6 py-16 text-center">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-slate-50/5 to-transparent backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-black/20 rounded-3xl"></div>
             
-            <div className="relative z-10 p-12">
-              <h2 className="text-4xl font-bold text-white mb-6">Need Help?</h2>
-              <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+            <div className="relative z-10 p-6 sm:p-12">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 sm:mb-6">Need Help?</h2>
+              <p className="text-base sm:text-lg lg:text-xl text-slate-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
                 Get answers to common questions and learn how to verify if HireOn works on your system
               </p>
               
               <Button 
                 onClick={() => setShowFAQ(!showFAQ)}
-                className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white font-semibold py-6 px-12 text-lg shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white font-semibold py-4 sm:py-6 px-8 sm:px-12 text-base sm:text-lg shadow-xl transform hover:scale-105 transition-all duration-300 w-full sm:w-auto"
               >
-                <Code className="h-6 w-6 mr-3" />
+                <Code className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3" />
                 FAQ & Help Center
               </Button>
             </div>
@@ -757,31 +818,31 @@ const IntroPage = () => {
         </div>
 
         {/* Footer */}
-        <footer className="relative z-20 mt-20 border-t border-slate-700/50">
+        <footer className="relative z-20 mt-16 sm:mt-20 border-t border-slate-700/50">
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 to-black/80 backdrop-blur-xl"></div>
 
-          <div className="relative z-10 px-8 py-16">
+          <div className="relative z-10 px-4 sm:px-8 py-12 sm:py-16">
             <div className="max-w-6xl mx-auto">
               {/* Main Footer Content */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12 mb-8 sm:mb-12">
                 {/* Company Info */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40">
                     
-                      <Target className="h-7 w-7 text-white" />
+                      <Target className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">
+                    <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">
                       HireOn
                     </h3>
                   </div>
-                  <p className="text-slate-300 leading-relaxed">
+                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
                     HireOn is your ultimate placement tool providing an invisible, undetectable solution across 
                     all major interview platforms with AI-powered assistance.
                   </p>
                   <div className="flex items-center gap-2 text-slate-400">
-                    <Shield className="h-4 w-4" />
-                    <span className="text-sm">100% Undetectable & Secure</span>
+                    <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="text-xs sm:text-sm">100% Undetectable & Secure</span>
                   </div>
                 </div>
 

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, Mail, CheckCircle, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Mail, CheckCircle, AlertCircle, Loader2, ArrowLeft, Clock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,26 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [canResend, setCanResend] = useState(false);
+  const [timer, setTimer] = useState(0);
+
+  // Timer effect for cooldown
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      setCanResend(true);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const startTimer = () => {
+    setCanResend(false);
+    setTimer(30); // 30 second cooldown
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,6 +43,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
       
       if (response.success) {
         setSuccess(true);
+        startTimer(); // Start cooldown timer
       } else {
         setError(response.error || 'Failed to send reset email');
       }
@@ -47,11 +68,40 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleResend = async () => {
+    if (!canResend) return;
+    
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await authAPI.forgotPassword({ email });
+      
+      if (response.success) {
+        setError('');
+        startTimer(); // Reset cooldown timer
+      } else {
+        setError(response.error || 'Failed to resend reset email');
+      }
+    } catch (error) {
+      console.error('Resend error:', error);
+      if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else {
+        setError('Failed to resend reset email. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClose = () => {
     setEmail('');
     setLoading(false);
     setSuccess(false);
     setError('');
+    setCanResend(false);
+    setTimer(0);
     onClose();
   };
 
@@ -169,6 +219,14 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                       <li>• Create a new password</li>
                       <li>• Sign in with your new password</li>
                     </ul>
+                    {!canResend && timer > 0 && (
+                      <div className="mt-3 pt-3 border-t border-cyan-500/20">
+                        <p className="text-xs text-cyan-300">
+                          <Clock className="h-3 w-3 inline mr-1" />
+                          You can resend in {timer} seconds
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -182,13 +240,26 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setSuccess(false);
-                    setEmail('');
-                  }}
-                  className="flex-1 border-slate-600/50 text-slate-300 hover:bg-slate-700/60"
+                  onClick={handleResend}
+                  disabled={!canResend || loading}
+                  className="flex-1 border-slate-600/50 text-slate-300 hover:bg-slate-700/60 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Send Another
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : !canResend ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2" />
+                      {timer}s
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Resend Email
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
