@@ -207,6 +207,7 @@ if (process.env.RESEND_API_KEY) {
 }
 
 // Function to send password reset email
+// Function to send password reset email with better error handling
 const sendPasswordResetEmail = async (email, resetToken) => {
   const frontendUrl = process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app';
   const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
@@ -243,7 +244,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
         </div>
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="color: #999; text-align: center; font-size: 12px; margin: 0;">
-          This email was sent from HireOn. If you have any questions, contact us at support@hireon.ex
+          This email was sent from HireOn. If you have any questions, contact us at support@hireon.com
         </p>
       </div>
     </div>
@@ -257,35 +258,91 @@ const sendPasswordResetEmail = async (email, resetToken) => {
       logger.info(`DEVELOPMENT MODE: Password reset token for ${email}: ${resetToken}`);
       logger.info(`DEVELOPMENT MODE: Reset URL: ${resetUrl}`);
       
-      return false; // Return false to indicate email not sent
+      return {
+        success: false,
+        devMode: true,
+        resetToken,
+        resetUrl
+      };
     }
     
     logger.info(`Attempting to send password reset email to: ${email}`);
     logger.info(`Resend API key configured: ${!!process.env.RESEND_API_KEY}`);
-    logger.info(`Resend API key length: ${process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0}`);
     
-    const { data, error } = await resend.emails.send({
-      from: 'HireOn <noreply@hireon.tk>', // Replace with your verified domain
-      to: [email],
-      subject: 'HireOn - Password Reset Request',
-      html: emailHtml,
-      headers: {
-        'X-Entity-Ref-ID': `reset-${Date.now()}` // Add unique identifier for tracking
-      }
-    });
+    // Try multiple "from" addresses in order of preference
+    const fromAddresses = [
+      'HireOn <onboarding@resend.dev>', // Resend's verified domain (works immediately)
+      'HireOn <noreply@hireon.tk>',     // Your custom domain (if verified)
+      'HireOn <noreply@hireon.com>',    // Alternative domain
+      'onboarding@resend.dev'           // Fallback to basic format
+    ];
 
-    if (error) {
-      logger.error('Resend API error:', error);
-      logger.error('Resend API error details:', JSON.stringify(error, null, 2));
-      return false;
+    let emailSent = false;
+    let lastError = null;
+
+    for (const fromAddress of fromAddresses) {
+      try {
+        logger.info(`Trying to send email from: ${fromAddress}`);
+        
+        const { data, error } = await resend.emails.send({
+          from: fromAddress,
+          to: [email],
+          subject: 'HireOn - Password Reset Request',
+          html: emailHtml,
+          headers: {
+            'X-Entity-Ref-ID': `reset-${Date.now()}` // Add unique identifier for tracking
+          }
+        });
+
+        if (error) {
+          logger.error(`Resend API error with ${fromAddress}:`, error);
+          lastError = error;
+          
+          // If it's a domain verification error, try next address
+          if (error.message && (
+            error.message.includes('domain') || 
+            error.message.includes('verify') ||
+            error.message.includes('unauthorized')
+          )) {
+            continue;
+          }
+          
+          // For other errors, stop trying
+          break;
+        }
+
+        logger.info(`Password reset email sent successfully to: ${email} from: ${fromAddress}. Email ID: ${data?.id}`);
+        emailSent = true;
+        break;
+
+      } catch (sendError) {
+        logger.error(`Error sending with ${fromAddress}:`, sendError);
+        lastError = sendError;
+        continue;
+      }
     }
 
-    logger.info(`Password reset email sent to: ${email}. Email ID: ${data?.id}`);
-    return true;
+    if (!emailSent) {
+      logger.error('Failed to send email with all from addresses. Last error:', lastError);
+      return {
+        success: false,
+        error: lastError,
+        resetToken, // Still return token for development
+        resetUrl
+      };
+    }
+
+    return { success: true };
+
   } catch (error) {
     logger.error('Error sending password reset email:', error);
     logger.error('Error stack:', error.stack);
-    return false;
+    return {
+      success: false,
+      error: error,
+      resetToken, // Still return token for development
+      resetUrl
+    };
   }
 };
 
@@ -1811,7 +1868,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
 
     logger.info(`Processing password reset request for: ${email}`);
 
-    // Check if user exists with better error handling
+    // Check if user exists
     let user;
     try {
       const { data, error } = await supabase
@@ -1820,21 +1877,12 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         .eq('email', email)
         .single();
 
-      if (error) {
-        logger.error('Supabase error checking user:', error);
-        // Don't expose whether user exists or not for security
-        return res.status(200).json({
-          success: true,
-          message: 'If an account with this email exists, a password reset link has been sent.'
-        });
-      }
-
-      if (!data) {
+      if (error || !data) {
         logger.info(`Password reset requested for non-existent email: ${email}`);
-        // Don't expose whether user exists or not for security
+        // Return clear message for non-existent accounts
         return res.status(200).json({
-          success: true,
-          message: 'If an account with this email exists, a password reset link has been sent.'
+          success: false,
+          error: 'No account found with this email address. Please check your email or create a new account.'
         });
       }
 
@@ -1851,7 +1899,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store reset token in database with better error handling
+    // Store reset token in database with fallback to memory
     let tokenStored = false;
     try {
       const { error: updateError } = await supabase
@@ -1871,21 +1919,20 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
           expires: resetTokenExpiry.getTime()
         });
         tokenStored = true;
-        logger.info(`Reset token stored in memory for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
+        logger.info(`Reset token stored in memory for ${email}`);
       } else {
         tokenStored = true;
-        logger.info(`Reset token stored in database for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
+        logger.info(`Reset token stored in database for ${email}`);
       }
     } catch (updateError) {
       logger.error('Database update error, using fallback storage:', updateError);
-      // Fall back to in-memory storage
       passwordResetTokens.set(resetToken, {
         email: user.email,
         userId: user.id,
         expires: resetTokenExpiry.getTime()
       });
       tokenStored = true;
-      logger.info(`Reset token stored in memory for ${email}: ${resetToken} (expires: ${resetTokenExpiry.toISOString()})`);
+      logger.info(`Reset token stored in memory for ${email}`);
     }
 
     if (!tokenStored) {
@@ -1897,38 +1944,39 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
 
     // Send password reset email
     try {
-      const emailSent = await sendPasswordResetEmail(email, resetToken);
+      const emailResult = await sendPasswordResetEmail(email, resetToken);
       
-      if (!emailSent) {
-        logger.warn(`Failed to send password reset email to: ${email}`);
+      if (emailResult.success) {
+        logger.info(`Password reset email sent to: ${email}`);
+        return res.json({
+          success: true,
+          message: 'Password reset email sent successfully.'
+        });
+      } else if (emailResult.devMode) {
+        // Development mode - email service not configured
+        logger.info(`Development mode: Password reset token generated for ${email}`);
+        return res.status(200).json({
+          success: true,
+          message: 'Password reset token generated (development mode)',
+          devMode: true,
+          resetToken: emailResult.resetToken,
+          resetUrl: emailResult.resetUrl,
+          note: 'Email service not configured. Use the reset URL above to test the password reset flow.'
+        });
+      } else {
+        // Email failed to send
+        logger.error(`Failed to send password reset email to: ${email}`, emailResult.error);
         
-        // For development/testing, log the reset token
+        // In development, still provide the token
         if (process.env.NODE_ENV !== 'production') {
-          logger.info(`DEVELOPMENT MODE: Password reset token for ${email}: ${resetToken}`);
-          logger.info(`DEVELOPMENT MODE: Reset URL: ${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`);
-          
           return res.status(200).json({
-            success: true,
-            message: 'Password reset token generated (development mode)',
-            resetToken: resetToken,
-            resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`
-          });
-        }
-        
-        // Check if email service is configured
-        if (!resend) {
-          logger.warn(`Email service not configured. Token generated but email not sent to: ${email}`);
-          
-          // For development/testing, return the reset token even in production
-          logger.info(`DEVELOPMENT MODE: Password reset token for ${email}: ${resetToken}`);
-          logger.info(`DEVELOPMENT MODE: Reset URL: ${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`);
-          
-          return res.status(200).json({
-            success: true,
-            message: 'Password reset token generated (email service not configured)',
-            resetToken: resetToken,
-            resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`,
-            note: 'Email service not configured. Use the reset URL above to test the password reset flow.'
+            success: false,
+            message: 'Email failed to send (development mode)',
+            devMode: true,
+            resetToken: emailResult.resetToken,
+            resetUrl: emailResult.resetUrl,
+            error: emailResult.error?.message || 'Email service error',
+            note: 'Use the reset URL above to test the password reset flow.'
           });
         }
         
@@ -1937,38 +1985,19 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
           error: 'Password reset email system is temporarily unavailable. Please try again later.'
         });
       }
-
-      logger.info(`Password reset email sent to: ${email}`);
     } catch (emailError) {
       logger.error('Email sending error:', emailError);
       
-      // For development/testing, log the reset token
+      // In development, still provide the token
       if (process.env.NODE_ENV !== 'production') {
-        logger.info(`DEVELOPMENT MODE: Password reset token for ${email}: ${resetToken}`);
-        logger.info(`DEVELOPMENT MODE: Reset URL: ${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`);
-        
         return res.status(200).json({
-          success: true,
-          message: 'Password reset token generated (development mode)',
-          resetToken: resetToken,
-          resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`
-        });
-      }
-      
-      // Check if email service is configured
-      if (!resend) {
-        logger.warn(`Email service not configured. Token generated but email not sent to: ${email}`);
-        
-        // For development/testing, return the reset token even in production
-        logger.info(`DEVELOPMENT MODE: Password reset token for ${email}: ${resetToken}`);
-        logger.info(`DEVELOPMENT MODE: Reset URL: ${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`);
-        
-        return res.status(200).json({
-          success: true,
-          message: 'Password reset token generated (email service not configured)',
+          success: false,
+          message: 'Email error (development mode)',
+          devMode: true,
           resetToken: resetToken,
           resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`,
-          note: 'Email service not configured. Use the reset URL above to test the password reset flow.'
+          error: emailError.message,
+          note: 'Use the reset URL above to test the password reset flow.'
         });
       }
       
@@ -1977,11 +2006,6 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         error: 'Password reset email system is temporarily unavailable. Please try again later.'
       });
     }
-    
-    res.json({
-      success: true,
-      message: 'If an account with this email exists, a password reset link has been sent.'
-    });
   } catch (error) {
     logger.error('Forgot password error:', error);
     res.status(500).json({
@@ -2770,6 +2794,126 @@ app.get('/api/debug/schema', async (req, res) => {
     res.status(500).json({ 
       error: 'Internal server error',
       message: error.message 
+    });
+  }
+});
+
+// Test endpoint for email functionality - call this to verify email works
+app.post('/api/test-email-now', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const testEmail = email || 'your-test-email@gmail.com';
+    
+    if (!resend) {
+      return res.status(503).json({
+        success: false,
+        error: 'Resend not configured',
+        apiKey: !!process.env.RESEND_API_KEY
+      });
+    }
+    
+    const { data, error } = await resend.emails.send({
+      from: 'HireOn <onboarding@resend.dev>', // Use Resend's verified domain
+      to: [testEmail],
+      subject: 'HireOn - Email Test',
+      html: '<h1>Test Email</h1><p>If you receive this, your email service is working!</p>'
+    });
+
+    if (error) {
+      return res.status(400).json({ success: false, error });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Test endpoint for advanced email functionality
+app.post('/api/debug/test-email-advanced', async (req, res) => {
+  try {
+    const { email: testEmail } = req.body;
+    const email = testEmail || 'test@example.com';
+    
+    if (!resend) {
+      return res.status(503).json({
+        success: false,
+        error: 'Resend not configured',
+        apiKey: !!process.env.RESEND_API_KEY,
+        apiKeyLength: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0
+      });
+    }
+
+    logger.info(`Testing advanced email sending to: ${email}`);
+    
+    // Test with multiple from addresses
+    const fromAddresses = [
+      'HireOn <onboarding@resend.dev>',
+      'HireOn <noreply@hireon.tk>',
+      'onboarding@resend.dev'
+    ];
+
+    const results = [];
+
+    for (const fromAddress of fromAddresses) {
+      try {
+        logger.info(`Testing email from: ${fromAddress}`);
+        
+        const { data, error } = await resend.emails.send({
+          from: fromAddress,
+          to: [email],
+          subject: 'HireOn - Email Service Test',
+          html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px;">
+              <h2>Email Service Test</h2>
+              <p>This is a test email from HireOn using <strong>${fromAddress}</strong></p>
+              <p>If you received this, the email service is working correctly!</p>
+              <p>Timestamp: ${new Date().toISOString()}</p>
+            </div>
+          `
+        });
+
+        if (error) {
+          logger.error(`Test email error with ${fromAddress}:`, error);
+          results.push({
+            fromAddress,
+            success: false,
+            error: error.message || error
+          });
+        } else {
+          logger.info(`Test email sent successfully from ${fromAddress}. Email ID: ${data?.id}`);
+          results.push({
+            fromAddress,
+            success: true,
+            emailId: data?.id
+          });
+        }
+      } catch (sendError) {
+        logger.error(`Test email exception with ${fromAddress}:`, sendError);
+        results.push({
+          fromAddress,
+          success: false,
+          error: sendError.message
+        });
+      }
+    }
+
+    const successfulSends = results.filter(r => r.success);
+    
+    res.json({
+      success: successfulSends.length > 0,
+      message: `Email test completed. ${successfulSends.length}/${results.length} addresses successful.`,
+      results,
+      recommendation: successfulSends.length === 0 
+        ? 'Consider verifying your domain in Resend dashboard or using onboarding@resend.dev'
+        : `Use ${successfulSends[0].fromAddress} for production emails`
+    });
+  } catch (error) {
+    logger.error('Advanced email test error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Advanced email test failed',
+      details: error.message
     });
   }
 });
