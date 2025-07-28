@@ -18,6 +18,20 @@ const compression = require('compression');
 const { body, validationResult } = require('express-validator');
 const winston = require('winston');
 const { Resend } = require('resend');
+const { S3Client } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
+
+// Configure AWS S3 v3 client
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  }
+});
+
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || 'hireon-downloads';
 
 // Configure logging
 const logger = winston.createLogger({
@@ -1094,7 +1108,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Download endpoint for desktop app
-app.get('/api/download/:platform', (req, res) => {
+app.get('/api/download/:platform', async (req, res) => {
   const { platform } = req.params;
   const { direct } = req.query; // Check if direct download is requested
   
@@ -1103,14 +1117,16 @@ app.get('/api/download/:platform', (req, res) => {
     windows: {
       filename: 'HireOn-Setup.exe',
       contentType: 'application/vnd.microsoft.portable-executable',
+      s3Key: 'HireOn-Setup.exe',
       githubUrl: 'https://github.com/nikhil-mangla/HireON/releases/download/v1.0.0/HireOn-Setup.exe',
-      localPath: './downloads/HireOn-Setup.exe' // When you have the file locally
+      localPath: './downloads/HireOn-Setup.exe'
     },
     mac: {
       filename: 'HireOn-1.0.0-arm64.dmg',
       contentType: 'application/x-apple-diskimage',
+      s3Key: 'HireOn-1.0.0-arm64.dmg',
       githubUrl: 'https://github.com/nikhil-mangla/HireON/releases/download/v1.0.0/HireOn-1.0.0-arm64.dmg',
-      localPath: './downloads/HireOn-1.0.0-arm64.dmg' // Updated to match your actual file
+      localPath: './downloads/HireOn-1.0.0-arm64.dmg'
     }
   };
 
@@ -1128,11 +1144,21 @@ app.get('/api/download/:platform', (req, res) => {
 
   // If direct download is requested, try to serve the file directly
   if (direct === 'true') {
-    const fs = require('fs');
-    const path = require('path');
-    const https = require('https');
-    
-    // Check if local file exists first
+    try {
+      // First, try to get signed URL from S3
+      const signedUrl = await generateSignedUrl(config.s3Key, config.filename, config.contentType);
+      
+      if (signedUrl) {
+        // Redirect to S3 signed URL for direct download
+        logger.info(`Redirecting to S3 signed URL for ${platform}: ${config.filename}`);
+        res.redirect(signedUrl);
+        return;
+      }
+    } catch (s3Error) {
+      logger.warn(`S3 signed URL generation failed for ${platform}:`, s3Error.message);
+    }
+
+    // Fallback: Check if local file exists
     if (fs.existsSync(config.localPath)) {
       // Serve file directly with proper headers
       res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
@@ -1142,7 +1168,7 @@ app.get('/api/download/:platform', (req, res) => {
       const fileStream = fs.createReadStream(config.localPath);
       fileStream.pipe(res);
       
-      logger.info(`Direct download served for ${platform}: ${config.filename}`);
+      logger.info(`Direct download served locally for ${platform}: ${config.filename}`);
       return;
     } else {
       // Local file doesn't exist, try to stream from GitHub
@@ -1154,6 +1180,7 @@ app.get('/api/download/:platform', (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       
       // Stream the file from GitHub
+      const https = require('https');
       https.get(config.githubUrl, (fileRes) => {
         if (fileRes.statusCode === 200) {
           // Successfully streaming from GitHub
@@ -1167,8 +1194,8 @@ app.get('/api/download/:platform', (req, res) => {
             error: 'File not available for download',
             message: 'The desktop app file is not yet available for download.',
             instructions: [
-              '1. Create a GitHub release with the file',
-              '2. Or upload the file to the server',
+              '1. Upload the file to S3 bucket',
+              '2. Create a GitHub release with the file',
               '3. For now, please use the web version at https://hireon-rho.vercel.app'
             ],
             note: 'Contact us for early access to the desktop app.'
@@ -1188,10 +1215,28 @@ app.get('/api/download/:platform', (req, res) => {
   }
 
   // For now, redirect to download page with instructions
-  // This prevents the GitHub 404 error during development
   const downloadPageUrl = `https://hireon-rho.vercel.app/download?platform=${platform}&direct=true`;
   res.redirect(downloadPageUrl);
 });
+
+// Helper function to generate S3 signed URL
+async function generateSignedUrl(key, filename, contentType) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: S3_BUCKET_NAME,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${filename}"`,
+      ResponseContentType: contentType
+    });
+
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // URL expires in 1 hour
+    logger.info(`Generated S3 signed URL for ${key}`);
+    return signedUrl;
+  } catch (error) {
+    logger.error(`Error generating S3 signed URL for ${key}:`, error);
+    return null;
+  }
+}
 
 // Get download URLs endpoint
 app.get('/api/download-urls', (req, res) => {

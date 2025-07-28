@@ -916,7 +916,7 @@ const IntroPage = () => {
                       <p className="font-semibold text-white">Refund Conditions:</p>
                       <ul className="list-disc list-inside space-y-2 ml-4">
                         <li>Refunds are only considered in cases of genuine technical failure where the Invisible Browser does not function as described and our support team is unable to resolve the issue.</li>
-                        <li>Refund requests must be made within 3 days of purchase, with a clear description of the problem and supporting evidence (such as screenshots or error messages).</li>
+                        <li>Refund requests must be made within 1 day of purchase, with a clear description of the problem and supporting evidence (such as screenshots or error messages).</li>
                         <li>No refunds will be issued for reasons such as change of mind, unsupported platforms, or failure to use the product as intended.</li>
                         <li>We encourage you to try our free plan before purchasing a subscription to ensure compatibility and satisfaction.</li>
                       </ul>
