@@ -19,4 +19,4 @@ release/
 
 # Python
 __pycache__/
-*.py[cod]
+*.py[cod]hireon-backend/downloads/

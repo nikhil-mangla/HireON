@@ -33,17 +33,17 @@ const DownloadPage = () => {
       const API_BASE_URL = localStorage.getItem('API_OVERRIDE') || 
                            import.meta.env.VITE_API_BASE_URL || 
                            'https://hireon-aiel.onrender.com';
-      
-      const downloadUrl = `${API_BASE_URL}/api/download/${platform}`;
-      
+
+      const downloadUrl = `${API_BASE_URL}/api/download/${platform}?direct=true`;
+
       console.log(`Starting download for ${platform} from:`, downloadUrl);
-      
+
       // Check if we have direct download parameter
       const urlParams = new URLSearchParams(window.location.search);
       const isDirectDownload = urlParams.get('direct') === 'true';
       
       if (isDirectDownload) {
-        // Show download instructions instead of redirecting to GitHub
+        // Show download instructions for development phase
         const message = `🚀 HireOn Desktop App Download\n\n` +
                        `Platform: ${platform.toUpperCase()}\n\n` +
                        `Since the desktop app is still in development, here are your options:\n\n` +
@@ -53,26 +53,36 @@ const DownloadPage = () => {
                        `Thank you for your interest! 🎯`;
         
         alert(message);
-      } else {
-        // Create a temporary anchor element for download
-    const link = document.createElement('a');
-        link.href = downloadUrl;
-    link.download = platform === 'windows' ? 'HireOn-Setup.exe' : 'HireOn.dmg';
-        link.target = '_blank'; // Open in new tab as fallback
-        
-        // Append to DOM, click, and remove
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+        return;
       }
 
-    // Update UI state
-    setDownloadStarted(prev => ({ ...prev, [platform]: true }));
+      // Update UI state
+      setDownloadStarted(prev => ({ ...prev, [platform]: true }));
 
-    // Reset state after 3 seconds
-    setTimeout(() => {
-      setDownloadStarted(prev => ({ ...prev, [platform]: false }));
-    }, 3000);
+      // Create a temporary anchor element for direct download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      // Set the download attribute to force download instead of navigation
+      link.setAttribute('download', platform === 'mac' ? 'HireOn-1.0.0-arm64.dmg' : 'HireOn-Setup.exe');
+      
+      // Do NOT set target="_blank" - this prevents redirects
+      // link.target = '_blank'; <-- removed this line
+      
+      // Hide the link element
+      link.style.display = 'none';
+      
+      // Append to DOM, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      console.log(`Direct download initiated for ${platform}`);
+
+      // Reset state after 5 seconds
+      setTimeout(() => {
+        setDownloadStarted(prev => ({ ...prev, [platform]: false }));
+      }, 5000);
 
       // Track download event
       console.log(`Download requested for ${platform}`);
@@ -80,8 +90,11 @@ const DownloadPage = () => {
     } catch (error) {
       console.error('Download failed:', error);
       
-      // Show user-friendly error message instead of redirecting to GitHub
+      // Show user-friendly error message
       alert(`Sorry, the download is not available yet.\n\nPlease try:\n• Using the web version\n• Contacting us for early access\n• Checking back soon for the official release!`);
+      
+      // Reset state
+      setDownloadStarted(prev => ({ ...prev, [platform]: false }));
     }
   };
 
@@ -216,8 +229,8 @@ const DownloadPage = () => {
             </CardHeader>
             <CardContent className="relative text-center">
               <div className="mb-6">
-                <div className="text-sm text-gray-500 mb-2">Version 2.1.0 • 52.8 MB</div>
-                <div className="text-xs text-gray-400">Compatible with Intel & Apple Silicon</div>
+                <div className="text-sm text-gray-500 mb-2">Version 1.0.0 • 186 MB</div>
+                <div className="text-xs text-gray-400">Compatible with Apple Silicon (M1/M2/M3)</div>
               </div>
               
               <Button 

@@ -995,26 +995,63 @@ app.get('/api/health', (req, res) => {
 // Download endpoint for desktop app
 app.get('/api/download/:platform', (req, res) => {
   const { platform } = req.params;
+  const { direct } = req.query; // Check if direct download is requested
   
-  // For now, serve placeholder files or redirect to a proper download
-  // You can upload your actual .dmg and .exe files to the backend
-  const downloadUrls = {
-    windows: 'https://hireon-aiel.onrender.com/downloads/HireOn-Setup.exe',
-    mac: 'https://hireon-aiel.onrender.com/downloads/HireOn.dmg'
+  // Configuration for different download methods
+  const downloadConfig = {
+    windows: {
+      filename: 'HireOn-Setup.exe',
+      contentType: 'application/vnd.microsoft.portable-executable',
+      githubUrl: 'https://github.com/nikhil-mangla/HireON/releases/download/v1.0.0/HireOn-Setup.exe',
+      localPath: './downloads/HireOn-Setup.exe' // When you have the file locally
+    },
+    mac: {
+      filename: 'HireOn-1.0.0-arm64.dmg',
+      contentType: 'application/x-apple-diskimage',
+      githubUrl: 'https://github.com/nikhil-mangla/HireON/releases/download/v1.0.0/HireOn-1.0.0-arm64.dmg',
+      localPath: './downloads/HireOn-1.0.0-arm64.dmg' // Updated to match your actual file
+    }
   };
 
-  if (!downloadUrls[platform]) {
+  if (!downloadConfig[platform]) {
     return res.status(400).json({
       success: false,
       error: 'Invalid platform. Supported platforms: windows, mac'
     });
   }
 
-  // Log download attempt
-  logger.info(`Download requested for platform: ${platform}`);
+  const config = downloadConfig[platform];
 
-  // For now, redirect to a download page with instructions
-  // This prevents the GitHub 404 error
+  // Log download attempt
+  logger.info(`Download requested for platform: ${platform}, direct: ${direct}`);
+
+  // If direct download is requested, try to serve the file directly
+  if (direct === 'true') {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Check if local file exists
+    if (fs.existsSync(config.localPath)) {
+      // Serve file directly with proper headers
+      res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
+      res.setHeader('Content-Type', config.contentType);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      const fileStream = fs.createReadStream(config.localPath);
+      fileStream.pipe(res);
+      
+      logger.info(`Direct download served for ${platform}: ${config.filename}`);
+      return;
+    } else {
+      // Local file doesn't exist, redirect to GitHub
+      logger.info(`Local file not found, redirecting to GitHub for ${platform}`);
+      res.redirect(config.githubUrl);
+      return;
+    }
+  }
+
+  // For now, redirect to download page with instructions
+  // This prevents the GitHub 404 error during development
   const downloadPageUrl = `https://hireon-rho.vercel.app/download?platform=${platform}&direct=true`;
   res.redirect(downloadPageUrl);
 });
@@ -1031,18 +1068,18 @@ app.get('/api/download-urls', (req, res) => {
     },
     mac: {
       url: 'https://hireon-rho.vercel.app/download?platform=mac',
-      filename: 'HireOn.dmg',
-      size: 'Coming Soon',
-      version: 'Coming Soon',
-      status: 'preparing'
+      filename: 'HireOn-1.0.0-arm64.dmg',
+      size: '186 MB',
+      version: '1.0.0',
+      status: 'available'
     }
   };
 
   res.json({
     success: true,
     downloads: downloadUrls,
-    message: 'Download information retrieved successfully. Desktop app is being prepared for release.',
-    note: 'The desktop app is currently in development. Please check back soon for the official release.'
+    message: 'Download information retrieved successfully. Mac version is now available!',
+    note: 'The Mac version (1.0.0) is ready for download. Windows version coming soon.'
   });
 });
 
