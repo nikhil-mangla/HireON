@@ -1937,43 +1937,29 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         // Email failed to send
         logger.error(`Failed to send password reset email to: ${email}`, emailResult.error);
         
-        // In development, still provide the token
-        if (process.env.NODE_ENV !== 'production') {
-          return res.status(200).json({
-            success: false,
-            message: 'Email failed to send (development mode)',
-            devMode: true,
-            resetToken: emailResult.resetToken,
-            resetUrl: emailResult.resetUrl,
-            error: emailResult.error?.message || 'Email service error',
-            note: 'Use the reset URL above to test the password reset flow.'
-          });
-        }
-        
-        return res.status(503).json({
+        // Always provide the token for development/testing
+        return res.status(200).json({
           success: false,
-          error: 'Password reset email system is temporarily unavailable. Please try again later.'
+          message: 'Email failed to send (development mode)',
+          devMode: true,
+          resetToken: emailResult.resetToken,
+          resetUrl: emailResult.resetUrl,
+          error: emailResult.error?.message || 'Email service error',
+          note: 'Use the reset URL above to test the password reset flow. Note: Resend only allows sending to verified email addresses in testing mode.'
         });
       }
     } catch (emailError) {
       logger.error('Email sending error:', emailError);
       
-      // In development, still provide the token
-      if (process.env.NODE_ENV !== 'production') {
-        return res.status(200).json({
-          success: false,
-          message: 'Email error (development mode)',
-          devMode: true,
-          resetToken: resetToken,
-          resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`,
-          error: emailError.message,
-          note: 'Use the reset URL above to test the password reset flow.'
-        });
-      }
-      
-      return res.status(503).json({
+      // Always provide the token for development/testing
+      return res.status(200).json({
         success: false,
-        error: 'Password reset email system is temporarily unavailable. Please try again later.'
+        message: 'Email error (development mode)',
+        devMode: true,
+        resetToken: resetToken,
+        resetUrl: `${process.env.FRONTEND_URL || 'https://hireon-rho.vercel.app'}/reset-password?token=${resetToken}`,
+        error: emailError.message,
+        note: 'Use the reset URL above to test the password reset flow. Note: Resend only allows sending to verified email addresses in testing mode.'
       });
     }
   } catch (error) {
