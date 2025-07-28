@@ -1160,7 +1160,8 @@ app.get('/api/download/:platform', async (req, res) => {
 
     // Fallback: Check if local file exists
     if (fs.existsSync(config.localPath)) {
-      // Serve file directly with proper headers
+      // Serve file directly with proper headers and 200 status
+      res.status(200);
       res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
       res.setHeader('Content-Type', config.contentType);
       res.setHeader('Cache-Control', 'no-cache');
@@ -1175,6 +1176,7 @@ app.get('/api/download/:platform', async (req, res) => {
       logger.info(`Local file not found, attempting to stream from GitHub for ${platform}`);
       
       // Set proper headers for download
+      res.status(200);
       res.setHeader('Content-Disposition', `attachment; filename="${config.filename}"`);
       res.setHeader('Content-Type', config.contentType);
       res.setHeader('Cache-Control', 'no-cache');
