@@ -63,7 +63,7 @@ app.use(compression());
 // Rate limiting
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs for auth endpoints
+  max: 20, // limit each IP to 20 requests per windowMs for auth endpoints (increased from 5)
   message: 'Too many authentication attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -272,7 +272,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     // Use Resend's verified domain directly
     try {
       const { data, error } = await resend.emails.send({
-        from: 'onboarding@resend.dev', // Use Resend's verified domain
+        from: 'HireOn <noreply@yourdomain.com>', // Replace with your verified domain
         to: [email],
         subject: 'HireOn - Password Reset Request',
         html: emailHtml
