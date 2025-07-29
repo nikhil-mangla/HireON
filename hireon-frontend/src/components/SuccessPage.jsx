@@ -21,6 +21,7 @@ const SuccessPage = ({ onBack }) => {
   const { user } = useAuth();
   const [deepLink, setDeepLink] = useState('');
   const [fallbackDeepLink, setFallbackDeepLink] = useState('');
+  const [developmentDeepLink, setDevelopmentDeepLink] = useState('');
   const [webFallbackUrl, setWebFallbackUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -40,6 +41,7 @@ const SuccessPage = ({ onBack }) => {
       if (response.data.success) {
         setDeepLink(response.data.deepLink);
         setFallbackDeepLink(response.data.fallbackDeepLink);
+        setDevelopmentDeepLink(response.data.developmentDeepLink);
         setWebFallbackUrl(response.data.webFallbackUrl);
       } else {
         setError('Failed to generate deep link');
@@ -90,28 +92,37 @@ const SuccessPage = ({ onBack }) => {
   };
 
   const showManualRegistrationInstructions = () => {
+    const devLink = developmentDeepLink || deepLink;
     const instructions = `
 To open the HireOn app manually on macOS:
 
-METHOD 1 - Terminal Command:
+METHOD 1 - Terminal Command (Production):
 1. Open Terminal
 2. Run this command:
    open -a "HireOn" "${deepLink}"
 
-METHOD 2 - Manual URL Scheme Registration:
+METHOD 2 - Terminal Command (Development):
+1. Open Terminal
+2. Run this command:
+   open -a "HireOn" "${devLink}"
+
+METHOD 3 - Manual URL Scheme Registration:
 1. Open Terminal
 2. Run this command:
    defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=text/plain;LSHandlerRoleAll=com.hireon.app;}'
 
-METHOD 3 - Copy and Paste:
+METHOD 4 - Copy and Paste:
 1. Copy this deep link: ${deepLink}
 2. Paste it in your browser's address bar
 3. Press Enter
 
-METHOD 4 - Web Version:
+METHOD 5 - Development Version:
+If you have a development version, try this link: ${devLink}
+
+METHOD 6 - Web Version:
 Use the web version instead of the desktop app
 
-METHOD 5 - Download Official Installer:
+METHOD 7 - Download Official Installer:
 Download the official installer from the download page to ensure proper URL scheme registration
 
 Note: If the app was installed manually (not through the official installer), the URL scheme may not be registered with macOS.
@@ -428,6 +439,44 @@ Or if the app is in a different location:
                     </Button>
                   </div>
 
+                  {/* Development Version Help */}
+                  <div className="mt-6 p-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-2xl border border-yellow-500/30">
+                    <h3 className="text-yellow-400 font-bold text-lg mb-3 flex items-center gap-2">
+                      🛠️ Development Version Detected
+                    </h3>
+                    <p className="text-yellow-300 text-sm mb-4">
+                      If you're using a development version of HireOn, try these options:
+                    </p>
+                    
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={() => {
+                          if (developmentDeepLink) {
+                            window.open(developmentDeepLink, '_blank');
+                          } else {
+                            alert('Development deep link not available. Please try the production link.');
+                          }
+                        }}
+                        variant="outline"
+                        className="w-full border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20 font-medium"
+                      >
+                        🔗 Try Development Deep Link
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => {
+                          const devLink = developmentDeepLink || deepLink;
+                          navigator.clipboard.writeText(devLink);
+                          alert('Development deep link copied to clipboard!');
+                        }}
+                        variant="outline"
+                        className="w-full border-orange-500/50 text-orange-400 hover:bg-orange-500/20 font-medium"
+                      >
+                        📋 Copy Development Link
+                      </Button>
+                    </div>
+                  </div>
+
                   {/* Manual Registration Help */}
                   <div className="mt-6 text-center space-y-3">
                     <Button 
@@ -512,7 +561,7 @@ Or if the app is in a different location:
                     </div>
                     <div>
                       <h3 className="text-white font-bold text-xl">macOS</h3>
-                      <p className="text-purple-300 text-sm">Version 2.1.0 • 52.8 MB</p>
+                      <p className="text-purple-300 text-sm">Version 2.1.0 • 186 MB</p>
                     </div>
                   </div>
                   
@@ -541,9 +590,7 @@ Or if the app is in a different location:
               </div>
 
               <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 p-4 rounded-xl border border-emerald-500/30">
-                <p className="text-emerald-300 text-sm font-semibold text-center">
-                  💡 After downloading, install the app and use your premium account to unlock all features!
-                </p>
+                
               </div>
             </CardContent>
           </Card>
