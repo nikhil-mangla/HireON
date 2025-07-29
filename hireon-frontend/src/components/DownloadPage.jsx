@@ -14,16 +14,9 @@ const DownloadPage = () => {
     const isDirectDownload = urlParams.get('direct') === 'true';
     
     if (isDirectDownload && platform) {
-      // Show download instructions immediately
-      const message = `🚀 HireOn Desktop App Download\n\n` +
-                     `Platform: ${platform.toUpperCase()}\n\n` +
-                     `Since the desktop app is still in development, here are your options:\n\n` +
-                     `1. Use the web version at ${window.location.origin}\n` +
-                     `2. Try the "Open App" feature if you have the development version\n` +
-                     `3. Contact us for early access to the desktop app\n\n` +
-                     `Thank you for your interest! 🎯`;
-      
-      alert(message);
+      // Automatically trigger download for direct links
+      console.log(`Direct download requested for ${platform}`);
+      handleDownload(platform);
     }
   }, []);
 
@@ -38,22 +31,13 @@ const DownloadPage = () => {
 
       console.log(`Starting download for ${platform} from:`, downloadUrl);
 
-      // Check if we have direct download parameter
+      // Check if we have direct download parameter - now allow actual downloads
       const urlParams = new URLSearchParams(window.location.search);
       const isDirectDownload = urlParams.get('direct') === 'true';
       
+      // For direct downloads, proceed with actual download instead of showing alert
       if (isDirectDownload) {
-        // Show download instructions for development phase
-        const message = `🚀 HireOn Desktop App Download\n\n` +
-                       `Platform: ${platform.toUpperCase()}\n\n` +
-                       `Since the desktop app is still in development, here are your options:\n\n` +
-                       `1. Use the web version at ${window.location.origin}\n` +
-                       `2. Try the "Open App" feature if you have the development version\n` +
-                       `3. Contact us for early access to the desktop app\n\n` +
-                       `Thank you for your interest! 🎯`;
-        
-        alert(message);
-        return;
+        console.log(`Proceeding with direct download for ${platform}`);
       }
 
       // Update UI state
@@ -91,7 +75,7 @@ const DownloadPage = () => {
       console.error('Download failed:', error);
       
       // Show user-friendly error message
-      alert(`Sorry, the download is not available yet.\n\nPlease try:\n• Using the web version\n• Contacting us for early access\n• Checking back soon for the official release!`);
+      alert(`Download failed. Please try again or contact support if the problem persists.\n\nError: ${error.message}`);
       
       // Reset state
       setDownloadStarted(prev => ({ ...prev, [platform]: false }));
@@ -183,26 +167,17 @@ const DownloadPage = () => {
             </CardHeader>
             <CardContent className="relative text-center">
               <div className="mb-6">
-                <div className="text-sm text-gray-500 mb-2">Version 2.1.0 • 45.2 MB</div>
+                <div className="text-sm text-gray-500 mb-2">Version 1.0.0 • Coming Soon</div>
                 <div className="text-xs text-gray-400">Compatible with Windows 10, 11</div>
               </div>
               
               <Button 
                 onClick={() => handleDownload('windows')}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
-                disabled={downloadStarted.windows}
+                className="w-full bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-300"
+                disabled={true}
               >
-                {downloadStarted.windows ? (
-                  <>
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    Download Started!
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-5 w-5 mr-2" />
-                    Download for Windows
-                  </>
-                )}
+                <Download className="h-5 w-5 mr-2" />
+                Coming Soon
               </Button>
               
               <div className="mt-4 text-xs text-gray-500">

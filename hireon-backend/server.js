@@ -1171,12 +1171,28 @@ app.get('/api/download/:platform', async (req, res) => {
       }
     } catch (s3Error) {
       logger.error(`S3 signed URL generation failed for ${platform}:`, s3Error.message);
-      res.status(500).json({
-        success: false,
-        error: 'Download failed',
-        message: 'Failed to download the file. Please try again later.',
-        note: 'Contact us for early access to the desktop app.'
-      });
+      
+      // Check if it's a credentials issue
+      if (s3Error.name === 'SignatureDoesNotMatch' || s3Error.name === 'InvalidAccessKeyId') {
+        res.status(500).json({
+          success: false,
+          error: 'AWS Configuration Error',
+          message: 'The download service is currently being configured. Please try again later.',
+          note: 'This is a temporary issue. Contact support if the problem persists.',
+          instructions: [
+            '1. Try again in a few minutes',
+            '2. Use the web version at https://hireon-rho.vercel.app',
+            '3. Contact us for early access to the desktop app'
+          ]
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Download failed',
+          message: 'Failed to download the file. Please try again later.',
+          note: 'Contact us for early access to the desktop app.'
+        });
+      }
       return;
     }
   }
@@ -1201,6 +1217,12 @@ async function generateSignedUrl(key, filename, contentType) {
     return signedUrl;
   } catch (error) {
     logger.error(`Error generating S3 signed URL for ${key}:`, error);
+    
+    // Check if it's a credentials issue
+    if (error.name === 'SignatureDoesNotMatch' || error.name === 'InvalidAccessKeyId') {
+      logger.error('AWS credentials issue detected. Please check AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY');
+    }
+    
     return null;
   }
 }
