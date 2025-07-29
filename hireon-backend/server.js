@@ -2622,6 +2622,7 @@ app.post('/api/generate-deep-link', authenticateToken, async (req, res) => {
     // Generate multiple deep link URLs for different scenarios
     const deepLinkUrl = `hireon://auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
     const fallbackDeepLink = `learncodeapp://auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
+    const developmentDeepLink = `hireon-dev://auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
     const webFallbackUrl = `${process.env.FRONTEND_URL || 'https://hire-on-nikhil-manglas-projects.vercel.app'}/auth?token=${electronToken}&user=${encodeURIComponent(email)}&expires=${expires}`;
     
     // Also generate a fallback URL for manual copy
@@ -2638,6 +2639,7 @@ app.post('/api/generate-deep-link', authenticateToken, async (req, res) => {
       success: true,
       deepLink: deepLinkUrl,
       fallbackDeepLink: fallbackDeepLink,
+      developmentDeepLink: developmentDeepLink,
       webFallbackUrl: webFallbackUrl,
       token: electronToken,
       fallbackData,
