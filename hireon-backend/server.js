@@ -111,12 +111,15 @@ const corsOptions = {
       'https://hireon-aiel.onrender.com',
       // Development origins
       'http://localhost:5173',
+      'http://localhost:5174',
       'http://localhost:5180',
       'http://localhost:3000',
       'http://localhost:3001',
       // Vercel preview deployments
       /^https:\/\/hireon-.*-nikhil-manglas-projects\.vercel\.app$/,
-      /^https:\/\/hireon-.*\.vercel\.app$/
+      /^https:\/\/hireon-.*\.vercel\.app$/,
+      // Localhost development (any port)
+      /^http:\/\/localhost:\d+$/
     ];
     
     // Check if origin is allowed
